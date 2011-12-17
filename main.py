@@ -136,6 +136,16 @@ def set_async(fd):
 	fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK)
 
 
+def pack(packet):
+	"""Take a Packet and return a data string"""
+	return packet # TODO
+
+
+def unpack(packet):
+	"""Take a data string and return a Packet"""
+	return packet # TODO
+
+
 class User(object):
 	"""An object representing a user. Should always contain an addr = (ip, port).
 	May contain other things eg. username.
