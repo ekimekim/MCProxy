@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ps aux | grep 'python proxy\.py' | grep -v grep | awk '{print $2}' | xargs kill
