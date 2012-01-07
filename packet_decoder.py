@@ -1,11 +1,6 @@
 #!/usr/bin/python
-import BitZone 
-import socket as socket_real
-from message import Message
 
 import struct
-from multiprocessing import Queue
-import threading
 import sys
 
 #TODO: Review which of these we actually need
@@ -30,6 +25,15 @@ class Packet:
 		self.data = {}
 		self.process = True
 		self.transmit = True
+
+	def name(self):
+		return names[self.ident]
+
+	def __str__(self):
+		from_to = {CLIENT_TO_SERVER: "to server", SERVER_TO_CLIENT: "from server"}[self.direction]
+		return "%s packet %s: %s" % (self.name(), from_to, repr(self.data))
+
+
 data_types = {
 	"ubyte":  ('B', 1),
 	"byte":   ('b', 1),
@@ -40,6 +44,8 @@ data_types = {
 	"double": ('d', 8),
 	"long":   ('q', 8)
 }
+
+
 names = {
 	0x00:	"Keep-alive",
 	0x01:	"Login request",
@@ -99,6 +105,8 @@ names = {
 	0xC8:	"Increment statistic",
 	0xFF:	"Disconnect"
 }
+
+
 structs = {
 	#Keep-alive
 	0x00: (),
@@ -429,13 +437,16 @@ structs = {
 		
 
 class PacketDecoder:
-	def __init__(self, a_kZoneAdmin):
+	def __init__(self, to_server):
 		self.buff = ''
 		self.error_count = 0
-		self.node = CLIENT_TO_SERVER
-		self.kZoneAdmin = a_kZoneAdmin
+		self.node = CLIENT_TO_SERVER if to_server else SERVER_TO_CLIENT
 		self.iPacketCounter = 0
+
+
 	def get_struct(self, packet):
+		"""Reads ident and direction from packet, and returns the associated struct description from structs global.
+		Normalises return to be a ((str, str), ...)"""
 		o = structs[packet.ident]
 		if isinstance(o, dict):
 			o = o[packet.direction]
@@ -443,6 +454,8 @@ class PacketDecoder:
 			o = (o),
 		#print o
 		return o
+
+
 	def pack(self, data_type, data):
 		if data_type in data_types:
 			format = data_types[data_type]
@@ -477,7 +490,10 @@ class PacketDecoder:
 						o += self.pack('int', val[i])
 			o += self.pack('byte', 127)
 			return o
+
+
 	def unpack(self, data_type):
+		"""Reads buff (consuming bytes) and returns the unpacked value according to the given type."""
 		if data_type in data_types:
 			format = data_types[data_type]
 			return self.unpack_real(format[0], format[1])
@@ -529,18 +545,26 @@ class PacketDecoder:
 				o.append(t)
 				mtype = self.unpack('byte')
 			return o
+
 					
 	def unpack_real(self, data_type, length):
+		"""A helper function for unpack(), it handles any data type that is understood by the struct module."""
 		o = struct.unpack_from('!'+data_type, self.buff)[0]
 		self.buff = self.buff[length:]
 		return o
+
+
 	def pack_real(self, data_type, data):
 		return struct.pack('!'+data_type, data)
+
+
 	def unpack_array(self, data_type, count):
 		a = []
 		for i in range(count):
 			a.append(self.unpack(data_type))
 		return a
+
+
 	def pack_array(self, data_type, data):
 		o = ''
 		for d in data:
@@ -605,6 +629,12 @@ class PacketDecoder:
 			return None
 	
 	def read_packet(self):
+		"""Reads the bytestring in self.buff, and returns the first packet contained within it.
+		Sets self.buff to remaining bytestring.
+
+		If packet is incomplete, returns None. But may raise if it thinks a real malformed packet has been recieved.
+		"""
+
 		#self.debug("READ BUFFER SIZE: %d" % len(self.buff))
 		backup = self.buff
 		packet = Packet()
@@ -612,11 +642,14 @@ class PacketDecoder:
 			packet.direction = self.node
 			packet.ident = self.unpack('ubyte')
 			
-                        #Defined structs from huge dict
-                        for i in self.get_struct(packet):
-                                packet.data[i[1]] = self.unpack(i[0])
-                       
-                        
+			#Defined structs from huge dict
+			for i in self.get_struct(packet):
+				# i is (type, name)
+				# this populates packet.data with {name: value}
+				packet.data[i[1]] = self.unpack(i[0])
+
+			# I believe the following are packet-type specific fixes for variable-length packets.
+
 			#0x17
 			if packet.ident == 0x17:
 				if packet.data['unknown'] > 0:
@@ -632,12 +665,12 @@ class PacketDecoder:
 			#0x34
 			if packet.ident == 0x34:
 				coords   = self.unpack_array_fast('short', packet.data['data_size'])
-				btype    = self.unpack_array_fast('byte',  packet.data['data_size'])
+				btype	= self.unpack_array_fast('byte',  packet.data['data_size'])
 				metadata = self.unpack_array_fast('byte',  packet.data['data_size'])
 				packet.data["blocks"] = []
 				for i in zip(coords, btype, metadata):
 					block = {}
-					block["x"] =        i[0] >> 12
+					block["x"] =		i[0] >> 12
 					block["z"] = 0x0F & i[0] >> 8
 					block["y"] = 0xFF & i[0]
 					block["type"] = i[1]
@@ -661,23 +694,23 @@ class PacketDecoder:
 				del packet.data["data_size"]
 			#0x82:
 			if packet.ident == 0x82:
-                                print "Text ???"
+				print "Text ???"
 				packet.data["text"] = []
 				for i in range(4):
-					print "    " + packet.data.pop("line_%s" % (i+1))
+					print "	" + packet.data.pop("line_%s" % (i+1))
 					#packet.data["text"].append(packet.data.pop("line_%s" % (i+1)))
 					
 			#0x83
 			if packet.ident == 0x83:
 				packet.data["data"] = self.unpack_array_fast('byte', packet.data['data_size'])
 				del packet.data["data_size"]
+
+			# Sets packet.original to the byte string that the packet was decoded from.
 			packet.original = backup[:len(backup) - len(self.buff)]
+
 			self.error_count = 0
 			return packet
 
-
-                       
-                        
 		except:
 			self.buff = backup
 			self.error_count += 1
@@ -685,7 +718,11 @@ class PacketDecoder:
 				self.debug("=%d\tFailed to decode packet %x" % (self.error_count, packet.ident))
 				raise
 			return None
+
+
 	def encode_packet(self, packet):
+		"""Takes a packet, and returns the encoded bytestring representing it."""
+
 		try:
 			output = self.pack('ubyte', packet.ident)
 			append = ''
@@ -740,6 +777,7 @@ class PacketDecoder:
 				output += self.pack(i[0], packet.data[i[1]])
 			
 			output += append
+			# Is this meant to be a multiline comment? Seriously?
 			"""
 			if hasattr(packet, "original") and output != packet.original:
 				f1 = open('err1.bin', 'w')
@@ -769,3 +807,19 @@ class PacketDecoder:
 		if self.node == NODE_CLIENT:
 			print "[CLIENT] %s" % m
 
+
+def stateless_unpack(buff, to_server):
+	"""A wrapper about the normal objects, that lets you unpack encoded packets easily.
+	Returns (packet, remaining_buff), where remaining_buff is the given buffer without the bytes eaten by the packet.
+	If no more packets can be read from buff, returns (None, buff).
+	"""
+	decoder = PacketDecoder(to_server)
+	decoder.buff = buff
+	packet = decoder.read_packet()
+	return packet, decoder.buff
+
+def stateless_pack(packet, to_server):
+	"""A wrapper about the normal objects, that lets you pack decoded packets easily.
+	Returns the bytestring that represents the packet."""
+	decoder = PacketDecoder(to_server)
+	return decoder.encode_packet(packet)
