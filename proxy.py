@@ -8,6 +8,7 @@ from select import error as select_error
 import sys, os, time
 import simple_logging as logging
 import traceback
+from thread import allocate_lock
 
 from packet_decoder import stateless_unpack as unpack
 from packet_decoder import stateless_pack as pack
@@ -20,9 +21,12 @@ conn_map = {} # Map from in_sock to out_sock (for both directions)
 user_map = {} # Map from sock to user data
 user_socks = set() # Collection of socks to users
 buffers = {} # Map from fd to a read buffer so we always read 256 bytes
+sio_lock = allocate_lock() # Lock to emulate NOT having SA_NODEFER set. (grumble python grumble)
+listener = None # the main bound listen socket
 
 def main():
 
+	global listener
 	listener = socket()
 	listener.bind(LISTEN_ADDR)
 	listener.listen(128)
@@ -73,24 +77,31 @@ def main():
 			set_async(user_sock)
 			set_async(srv_sock)
 			logging.debug("Now accepting packets from address %s", str(addr))
+			# SIGIO won't be sent if the change occured before set_async, so to be safe:
+			handle_poll(0, None)
 	except Exception:
 		logging.critical("Unhandled exception", exc_info=1)
+		listener.close()
 		sys.exit(1)
 
-sio_queue = 0
+
+sio_repeat = False
 def handle_poll(sig, frame):
 	"""Gets called when SIGIO is recived. Arguments are required."""
 	try:
-		global sio_queue
-		if sio_queue:
+		global sio_lock
+		global sio_repeat
+		acquired = sio_lock.acquire(False)
+		if not acquired:
 			logging.debug("SIGIO ignored, lock active")
-			sio_queue = 2
+			sio_repeat = True
 			return
 		if sig != SIGIO:
 			logging.debug("Recieved SIGIO (repeated)")
 		else:
 			logging.debug("Recieved SIGIO")
-		sio_queue = 1
+		sio_repeat = False # Not safe to reset this after select() but now it's fine
+
 		# The select() call is weird. Basically, r,w,x = select(r,w,x,timeout)
 		#  where r,w,x are lists of files. It filters the lists so the output contains:
 		#  r: files ready to be read
@@ -107,18 +118,21 @@ def handle_poll(sig, frame):
 			else:
 				break
 		dead = []
+		logging.debug(r)
 		for fd in r:
+			logging.debug("reading from socket %s", fd)
 			if fd in dead:
+				logging.debug("fd already down - skipping")
 				continue
 			teardown = False
 			user = user_map[fd]
 			to_server = (fd in user_socks)
 			buf = buffers[fd]
+			logging.debug("Buffer before read: length %d", len(buf))
 			while 1: # Get everything there is to read
 				try:
 					read = fd.recv(1024)
 				except socket_error, ex:
-					logging.debug(str(ex))
 					break # Stop while loop - we've read all we can
 				if not read:
 					# Empty read means EOF - i think.
@@ -130,6 +144,7 @@ def handle_poll(sig, frame):
 					break
 				buf += read
 
+			logging.debug("Buffer after read: length %d", len(buf))
 			while 1:
 				try:
 					packet, buf = unpack(buf, to_server)
@@ -153,6 +168,7 @@ def handle_poll(sig, frame):
 					break
 				conn_map[fd].send(out_bytestr)
 
+			logging.debug("Buffer after decode: length %d", len(buf))
 			buffers[fd] = buf
 			if teardown:
 				if to_server:
@@ -172,15 +188,15 @@ def handle_poll(sig, frame):
 				del buffers[srv_fd]
 				user_socks.remove(user_fd)
 				logging.info("Removed socket pair for %s", user.addr)
-		if sio_queue == 2:
+
+		sio_lock.release()
+		if sio_repeat:
 			logging.debug("Extra SIGIO occured during handling, repeat")
-			sio_queue = 0
 			handle_poll(0,frame)
-		else:
-			sio_queue = 0
 		logging.debug("exiting handler")
 	except Exception:
 		logging.critical("Unhandled exception", exc_info=1)
+		listener.close()
 		sys.exit(1)
 
 
@@ -203,7 +219,7 @@ def handle_packet(packet, user, to_server):
 		to_server: True if packet is user->server, else False.
 		addr: The user packet is being sent from/to.
 	Return a list of packet objects to send to out stream (normally [the same packet])"""
-	logging.info("Packet: %s" % repr(packet))
+	logging.info("Packet: %s\nOriginal: %s", packet, repr(packet.original))
 	packets = [packet]
 	for plugin in plugins:
 		try:

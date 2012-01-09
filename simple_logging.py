@@ -36,8 +36,8 @@ def warning():
 def error():
 	pass
 
-def exception(msg):
-	error(msg, exc_info=1)
+def exception(msg, *args):
+	error(msg, *args, exc_info=1)
 
 @log_fn
 def critical():

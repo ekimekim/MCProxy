@@ -73,6 +73,7 @@ names = {
 	0x17:	"Add object/vehicle",
 	0x18:	"Mob spawn",
 	0x19:	"Entity: painting",
+	0x1A:	"Experience Orb",
 	0x1B:	"Stance update",
 	0x1C:	"Entity velocity",
 	0x1D:	"Destroy entity",
@@ -84,6 +85,9 @@ names = {
 	0x26:	"Entity status",
 	0x27:	"Attach entity",
 	0x28:	"Entity metadata",
+	0x29:	"Entity effect",
+	0x2A:	"Remove entity effect",
+	0x2B:	"Experience",
 	0x32:	"Pre-chunk",
 	0x33:	"Map chunk",
 	0x34:	"Multi-block change",
@@ -100,28 +104,39 @@ names = {
 	0x68:	"Window items",
 	0x69:	"Update progress bar",
 	0x6A:	"Transaction",
+	0x6B:	"Creative inventory action",
+	0x6C:	"Enchant Item",
 	0x82:	"Update sign",
 	0x83:	"Map data",
 	0xC8:	"Increment statistic",
+	0xFE:	"Server list ping",
 	0xFF:	"Disconnect"
 }
 
 
 structs = {
 	#Keep-alive
-	0x00: (),
+	0x00: ("int", "keep_alive_id"),
 	#Login request
-	0x01:	{ 
+	0x01:	{
 		CLIENT_TO_SERVER: (
 			("int", "protocol_version"),
 			("string16", "username"),
 			("long", "map_seed"),
-			("byte", "dimension")),
+			("int", "server_mode"),
+			("byte", "dimension")
+			("byte", "difficulty")
+			("ubyte", "world_height")
+			("ubyte", "max_players")),
 		SERVER_TO_CLIENT: (
 			("int", "entity_id"),
 			("string16", "unknown"),
 			("long", "map_seed"),
-			("byte", "dimension"))},
+			("int", "server_mode"),
+			("byte", "dimension")
+			("byte", "difficulty")
+			("ubyte", "world_height")
+			("ubyte", "max_players"))},
 	#Handshake
 	0x02:	{
 		CLIENT_TO_SERVER: ("string16", "username"),
@@ -147,9 +162,17 @@ structs = {
 		("int", "object_entity_id"),
 		("bool", "left_click")),
 	#Update health
-	0x08: ("short", "health"),
+	0x08: (
+		("short", "health"),
+		("short", "food"),
+		("float", "food_saturation")),
 	#Respawn
-	0x09: ("byte", "dimension"),
+	0x09: (
+		("byte", "dimension"),
+		("byte", "difficulty"),
+		("byte", "server_mode"),
+		("short", "world_height"),
+		("long", "map_seed")),
 	#Player
 	0x0A: ("bool", "on_ground"),
 	#Player position
@@ -265,14 +288,21 @@ structs = {
 		("int", "y"),
 		("int", "z"),
 		("int", "direction")),
+	#Experience Orb
+	0x1A: (
+		("int", "entity_id"),
+		("int", "x"),
+		("int", "y"),
+		("int", "z"),
+		("short", "count")),
 	#Stance update
 	0x1B: (
 		("float", "unknown1"),
 		("float", "unknown2"),
-		("boolean", "unknown3"),
-		("boolean", "unknown4"),
-		("float", "unknown5"),
-		("float", "unknown6")),
+		("float", "unknown3"),
+		("float", "unknown4"),
+		("bool", "unknown5"),
+		("bool", "unknown6")),
 	#Entity velocity
 	0x1C: (
 		("int", "entity_id"),
@@ -322,6 +352,21 @@ structs = {
 	0x28: (
 		("int", "entity_id"),
 		("metadata", "metadata")),
+	# Entity effect
+	0x29: (
+		("int", "entity_id"),
+		("byte", "effect_id"),
+		("byte", "amplifier"),
+		("short", "duration")),
+	# remove entity effect
+	0x2A: (
+		("int", "entity_id"),
+		("byte", "effect_id")),
+	# Experience
+	0x2B: (
+		("float", "experience_bar"),
+		("short", "level"),
+		("short", "total_experience")),
 	#Pre-chunk
 	0x32: (
 		("int", "x"),
@@ -413,6 +458,14 @@ structs = {
 		("byte", "window_id"),
 		("short", "transaction_id"),
 		("bool", "accepted")),
+	# Creative Inventory Action
+	0x6B: (
+		("short", "slot"),
+		("slot", "slot_data")),
+	# Enchant Item
+	0x6C: (
+		("byte", "window_id"),
+		("byte", "enchantment")),
 	#Update sign
 	0x82: (
 		("int", "x"),
@@ -431,6 +484,13 @@ structs = {
 	0xC8: (
 		("int", "statistic_id"),
 		("byte", "amount")),
+	# Player List Item
+	0xC9: (
+		("string16", "player_name"),
+		("bool", "online"),
+		("short", "ping")),
+	#Server list ping
+	0xFE: (),
 	#Disconnect
 	0xFF: ("string16", "reason")}
 	
@@ -500,15 +560,19 @@ class PacketDecoder:
 		
 		if data_type == "string8":
 			length = self.unpack('short')
+			if length < 0:
+				raise Exception("Negative length for string")
 			if len(self.buff) < length:
-				raise Exception('string8: buff not long enough')
+				raise IncompleteData()
 			string = self.buff[:length]
 			self.buff = self.buff[length:]
 			return string
 		if data_type == "string16":
 			length = self.unpack('short')
+			if length < 0:
+				raise Exception("Negative length for string")
 			if len(self.buff) < 2*length:
-				raise Exception('string8: buff not long enough')
+				raise IncompleteData()
 			string = self.buff[:2*length].decode('utf-16be')
 			self.buff = self.buff[2*length:]
 			return string
@@ -549,6 +613,8 @@ class PacketDecoder:
 					
 	def unpack_real(self, data_type, length):
 		"""A helper function for unpack(), it handles any data type that is understood by the struct module."""
+		if len(self.buff) < length:
+			raise IncompleteData()
 		o = struct.unpack_from('!'+data_type, self.buff)[0]
 		self.buff = self.buff[length:]
 		return o
@@ -572,6 +638,8 @@ class PacketDecoder:
 		return o
 	def unpack_array_fast(self, data_type, count):
 		data_type = data_types[data_type]
+		if len(self.buff) < count*data_type[1]:
+			raise IncompleteData()
 		o = struct.unpack_from(data_type[0]*count, self.buff)
 		self.buff = self.buff[count*data_type[1]:]
 		return o
@@ -579,55 +647,8 @@ class PacketDecoder:
 	def pack_array_fast(self, data_type, data):
 		data_type = data_types[data_type]
 		return struct.pack(data_type[0]*len(data), *data)
-        def read_packet_bitversion(self):
-                backup = self.buff
-		packet = Packet()
-		try:
-			packet.direction = self.node
-			packet.ident = self.unpack('ubyte')
-			
-                        if packet.ident == 0x0B or packet.ident == 0x0D:
-                                #do not unpack and update of every godamm packet
-                                #these arn't rocketjets, the people can't even bend their knees
-                                self.iPacketCounter = self.iPacketCounter + 1
-                                if self.iPacketCounter < 32:
-                                        #don't unpack
-                                        return None
-                                #reset counter
-                                self.iPacketCounter = 0
-                                
-                                #player positions
-                                #Unpacking is the most fun part of a present
-                                iCount = 0
-                                v4Position = [0,0, False ,0]
-                                for i in self.get_struct(packet):
-                                        packet.data[i[1]] = self.unpack(i[0])
-                                        if iCount < 4:
-                                                v4Position[iCount] = packet.data[i[1]]
-                                                iCount += 1
-                                #Use position for zoning
-                                self.kZoneAdmin.UpdatePlayer(self.szLoginName, [v4Position[0],v4Position[3]])
-                                
-                        elif packet.ident == 0x02:
-                                #Player name from handshake yay!!!!
-                                self.szLoginName = ""
-                                for i in self.get_struct(packet):
-                                        packet.data[i[1]] = self.unpack(i[0])
-                                        if self.szLoginName == "":
-                                                self.szLoginName = packet.data[i[1]]
-                        else:
-                                return None
-		
-                        
-		except:
-			self.buff = backup
-			self.error_count += 1
-			#pfffft who cares about errors anyway?
-			if len(self.buff) > 8192 and self.error_count > 20:
-				self.debug("=%d\tFailed to decode packet %x" % (self.error_count, packet.ident))
-				raise
-			return None
-	
+
+
 	def read_packet(self):
 		"""Reads the bytestring in self.buff, and returns the first packet contained within it.
 		Sets self.buff to remaining bytestring.
@@ -643,10 +664,9 @@ class PacketDecoder:
 			packet.ident = self.unpack('ubyte')
 			
 			#Defined structs from huge dict
-			for i in self.get_struct(packet):
-				# i is (type, name)
+			for datatype, name in self.get_struct(packet):
 				# this populates packet.data with {name: value}
-				packet.data[i[1]] = self.unpack(i[0])
+				packet.data[name] = self.unpack(datatype)
 
 			# I believe the following are packet-type specific fixes for variable-length packets.
 
@@ -694,11 +714,9 @@ class PacketDecoder:
 				del packet.data["data_size"]
 			#0x82:
 			if packet.ident == 0x82:
-				print "Text ???"
 				packet.data["text"] = []
 				for i in range(4):
-					print "	" + packet.data.pop("line_%s" % (i+1))
-					#packet.data["text"].append(packet.data.pop("line_%s" % (i+1)))
+					packet.data["text"].append(packet.data.pop("line_%s" % (i+1)))
 					
 			#0x83
 			if packet.ident == 0x83:
@@ -708,15 +726,10 @@ class PacketDecoder:
 			# Sets packet.original to the byte string that the packet was decoded from.
 			packet.original = backup[:len(backup) - len(self.buff)]
 
-			self.error_count = 0
 			return packet
 
-		except:
+		except IncompleteData:
 			self.buff = backup
-			self.error_count += 1
-			if len(self.buff) > 8192 and self.error_count > 20:
-				self.debug("=%d\tFailed to decode packet %x" % (self.error_count, packet.ident))
-				raise
 			return None
 
 
@@ -799,13 +812,7 @@ class PacketDecoder:
 				print "%x\tOK %i\t%i" % (packet.ident, len(packet.original), len(output))"""
 			return output
 		except:
-			self.debug("Failed to encode packet %x" % packet.ident)
 			raise
-	def debug(self, m):
-		if self.node == NODE_SERVER:
-			print "[SERVER] %s" % m
-		if self.node == NODE_CLIENT:
-			print "[CLIENT] %s" % m
 
 
 def stateless_unpack(buff, to_server):
@@ -823,3 +830,6 @@ def stateless_pack(packet, to_server):
 	Returns the bytestring that represents the packet."""
 	decoder = PacketDecoder(to_server)
 	return decoder.encode_packet(packet)
+
+class IncompleteData(Exception):
+	pass
