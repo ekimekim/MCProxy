@@ -2,6 +2,7 @@
 
 import struct
 import sys
+import nbt
 
 #TODO: Review which of these we actually need
 NODE_SERVER = 0x01
@@ -33,6 +34,18 @@ class Packet:
 		from_to = {CLIENT_TO_SERVER: "to server", SERVER_TO_CLIENT: "from server"}[self.direction]
 		return "%s packet %s: %s" % (self.name(), from_to, repr(self.data))
 
+SLOT_EXTRA_DATA_IDS = [
+	0x103, 0x105, 0x15A, 0x167,
+	0x10C, 0x10D, 0x10E, 0x10F, 0x122,
+	0x110, 0x111, 0x112, 0x113, 0x123,
+	0x10B, 0x100, 0x101, 0x102, 0x124,
+	0x114, 0x115, 0x116, 0x117, 0x125,
+	0x11B, 0x11C, 0x11D, 0x11E, 0x126,
+	0x12A, 0x12B, 0x12C, 0x12D,
+	0x12E, 0x12F, 0x130, 0x131,
+	0x132, 0x133, 0x134, 0x135,
+	0x136, 0x137, 0x138, 0x139,
+	0x13A, 0x13B, 0x13C, 0x13D ]
 
 data_types = {
 	"ubyte":  ('B', 1),
@@ -44,7 +57,6 @@ data_types = {
 	"double": ('d', 8),
 	"long":   ('q', 8)
 }
-
 
 names = {
 	0x00:	"Keep-alive",
@@ -109,10 +121,10 @@ names = {
 	0x82:	"Update sign",
 	0x83:	"Map data",
 	0xC8:	"Increment statistic",
+	0xC9:	"Player List Item",
 	0xFE:	"Server list ping",
 	0xFF:	"Disconnect"
 }
-
 
 structs = {
 	#Keep-alive
@@ -124,18 +136,18 @@ structs = {
 			("string16", "username"),
 			("long", "map_seed"),
 			("int", "server_mode"),
-			("byte", "dimension")
-			("byte", "difficulty")
-			("ubyte", "world_height")
+			("byte", "dimension"),
+			("byte", "difficulty"),
+			("ubyte", "world_height"),
 			("ubyte", "max_players")),
 		SERVER_TO_CLIENT: (
 			("int", "entity_id"),
 			("string16", "unknown"),
 			("long", "map_seed"),
 			("int", "server_mode"),
-			("byte", "dimension")
-			("byte", "difficulty")
-			("ubyte", "world_height")
+			("byte", "dimension"),
+			("byte", "difficulty"),
+			("ubyte", "world_height"),
 			("ubyte", "max_players"))},
 	#Handshake
 	0x02:	{
@@ -415,7 +427,9 @@ structs = {
 		("int", "z"),
 		("int", "extra")),
 	#New/invalid state
-	0x46: ("byte", "reason"),
+	0x46: (
+		("byte", "reason"),
+		("byte", "gamemode")),
 	#Thunderbolt
 	0x47: (
 		("int", "entity_id"),
@@ -493,8 +507,7 @@ structs = {
 	0xFE: (),
 	#Disconnect
 	0xFF: ("string16", "reason")}
-	
-		
+
 
 class PacketDecoder:
 	def __init__(self, to_server):
@@ -528,6 +541,16 @@ class PacketDecoder:
 			if data['id'] > 0:
 				o += self.pack('byte',  data['amount'])
 				o += self.pack('short', data['damage'])
+			if 'extra' in data:
+				nbtdata = data['extra']
+				if nbtdata is None:
+					o += self.pack('short', -1)
+				else:
+					nbtdata = nbt.encode(nbtdata)
+					nbtdata = nbt.gzip(nbtdata)
+					nbt_len = len(nbtdata)
+					o += self.pack('short', nbt_len)
+					o += nbtdata
 			return o
 		if data_type == "metadata":
 			o = ''
@@ -582,6 +605,14 @@ class PacketDecoder:
 			if o["id"] > 0:
 				o["amount"] = self.unpack('byte')
 				o["damage"] = self.unpack('short')
+			if o["id"] in SLOT_EXTRA_DATA_IDS:
+				extra_len = self.unpack('short')
+				if extra_len <= 0:
+					o["extra"] = None
+				else:
+					extra_buff = self.buff[:extra_len]
+					self.buff = self.buff[extra_len:]
+					o["extra"] = nbt.decode(nbt.gunzip(self.buff))
 			return o
 		if data_type == "metadata":
 			#[(17, 0), (0, 0), (16, -1)]

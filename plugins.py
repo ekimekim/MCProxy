@@ -1,2 +1,3 @@
+import log_all
 
-plugins = []
+plugins = [log_all]

@@ -9,9 +9,11 @@ import sys, os, time
 import simple_logging as logging
 import traceback
 from thread import allocate_lock
+from types import InstanceType
 
 from packet_decoder import stateless_unpack as unpack
 from packet_decoder import stateless_pack as pack
+from packet_decoder import Packet
 
 from config import *
 
@@ -20,7 +22,8 @@ from plugins import plugins
 conn_map = {} # Map from in_sock to out_sock (for both directions)
 user_map = {} # Map from sock to user data
 user_socks = set() # Collection of socks to users
-buffers = {} # Map from fd to a read buffer so we always read 256 bytes
+buffers = {} # Map from fd to a read buffer
+send_buffers = {} # Map from fd to a send buffer
 sio_lock = allocate_lock() # Lock to emulate NOT having SA_NODEFER set. (grumble python grumble)
 listener = None # the main bound listen socket
 
@@ -40,7 +43,7 @@ def main():
 		try:
 			logging.debug("Loading plugin: %s", plugin)
 			plugin.send = send_packet
-			plugin.OnStart()
+			plugin.on_start()
 		except:
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
@@ -61,7 +64,7 @@ def main():
 				user_sock, addr = listener.accept()
 			except socket_error: # most likely an E_INTR due to SIGIO
 				continue
-			logging.debug("New connection from address %s", str(addr))
+			logging.info("New connection from address %s", str(addr))
 			srv_sock = socket()
 			user = User(addr=addr, user_sock=user_sock, srv_sock=srv_sock)
 			srv_sock.connect(SERVER_ADDR)
@@ -73,6 +76,8 @@ def main():
 			user_socks.add(user_sock)
 			buffers[user_sock] = ''
 			buffers[srv_sock] = ''
+			send_buffers[user_sock] = ''
+			send_buffers[srv_sock] = ''
 			# Note we set async last, or else a race cdn could occur: Recieve a signal before setup is done.
 			set_async(user_sock)
 			set_async(srv_sock)
@@ -110,15 +115,27 @@ def handle_poll(sig, frame):
 		# Note that i'm looking for files that are readable, out of both the user socks AND the server socks.
 		while 1:
 			try:
-				r, w, x = select(conn_map.keys(), [], [], SELECT_TIMEOUT)
+				r, w, x = select(conn_map.keys(), [conn_map.keys()], [], SELECT_TIMEOUT)
 			except select_error, ex:
 				code, msg = ex
 				if msg != 'Interrupted system call':
 					raise
 			else:
 				break
+
 		dead = []
-		logging.debug(r)
+
+		for fd in w:
+			buf = send_buffers[fd]
+			if not buf:
+				continue
+			try:
+				n = fd.send(buf)
+			except socket_error:
+				n = 0
+			buf = buf[n:]
+			send_buffers[fd] = buf
+			
 		for fd in r:
 			logging.debug("reading from socket %s", fd)
 			if fd in dead:
@@ -139,7 +156,7 @@ def handle_poll(sig, frame):
 					if to_server:
 						logging.info("Connection from %s closed", user.addr)
 					else:
-						logging.warning("Server connection for %s closed", user.addr)
+						logging.info("Server connection for %s closed", user.addr)
 					teardown = True
 					break
 				buf += read
@@ -157,7 +174,7 @@ def handle_poll(sig, frame):
 				if packet is None:
 					break
 
-				logging.debug("packet %s %s: %s", "from" if to_server else "to", user.addr,  packet)
+#				logging.debug("packet %s %s: %s", "from" if to_server else "to", user.addr,  packet)
 				packets = handle_packet(packet, user, to_server)
 				try:
 					out_bytestr = ''.join([pack(packet, to_server) for packet in packets])
@@ -166,7 +183,15 @@ def handle_poll(sig, frame):
 					teardown = True
 					logging.warning("Dropping connection for %s", user.addr)
 					break
-				conn_map[fd].send(out_bytestr)
+
+				send_fd = conn_map[fd]
+				buf = send_buffers[send_fd]
+				buf += out_bytestr
+				try:
+					n = send_fd.send(buf)
+				except socket_error:
+					n = 0
+				buf = buf[n:]
 
 			logging.debug("Buffer after decode: length %d", len(buf))
 			buffers[fd] = buf
@@ -219,20 +244,24 @@ def handle_packet(packet, user, to_server):
 		to_server: True if packet is user->server, else False.
 		addr: The user packet is being sent from/to.
 	Return a list of packet objects to send to out stream (normally [the same packet])"""
-	logging.info("Packet: %s\nOriginal: %s", packet, repr(packet.original))
 	packets = [packet]
 	for plugin in plugins:
-		try:
-			old_packets = packets[:]
-			packets = []
-			for packet in old_packets:
-				ret = plugin.OnPacket(packet, user, to_server)
+		old_packets = packets
+		packets = []
+		for packet in old_packets:
+			try:
+				ret = plugin.on_packet(packet, user, to_server)
+				ispacket = lambda x: type(x) == InstanceType and isinstance(x, Packet)
 				if type(ret) == list:
+					assert all(ispacket(x) for x in ret), "Return value not list of packets: %s" % repr(ret)
 					packets += ret
-				else:
+				elif ispacket(ret):
 					packets.append(ret)
-		except:
-			logging.exception("Error in plugin %s" % plugin)
+				else:
+					assert False, "Return value not packet or list: %s" % repr(ret)
+			except:
+				logging.exception("Error in plugin %s" % plugin)
+				packets.append(packet)
 	return packets
 
 
