@@ -26,6 +26,7 @@ buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer
 sio_lock = allocate_lock() # Lock to emulate NOT having SA_NODEFER set. (grumble python grumble)
 listener = None # the main bound listen socket
+pending = set() # the sockets that have pending sends
 
 def main():
 
@@ -115,7 +116,7 @@ def handle_poll(sig, frame):
 		# Note that i'm looking for files that are readable, out of both the user socks AND the server socks.
 		while 1:
 			try:
-				r, w, x = select(conn_map.keys(), [conn_map.keys()], [], SELECT_TIMEOUT)
+				r, w, x = select(conn_map.keys(), pending, [], SELECT_TIMEOUT)
 			except select_error, ex:
 				code, msg = ex
 				if msg != 'Interrupted system call':
@@ -125,15 +126,19 @@ def handle_poll(sig, frame):
 
 		dead = []
 
+		logging.debug("%s\n%s", r, w)
+
 		for fd in w:
 			buf = send_buffers[fd]
-			if not buf:
-				continue
 			try:
 				n = fd.send(buf)
 			except socket_error:
 				n = 0
-			buf = buf[n:]
+			if n != len(buf):
+				buf = buf[n:]
+				pending.add(send_fd)
+			else:
+				buf = ''
 			send_buffers[fd] = buf
 			
 		for fd in r:
@@ -191,7 +196,13 @@ def handle_poll(sig, frame):
 					n = send_fd.send(buf)
 				except socket_error:
 					n = 0
-				buf = buf[n:]
+				if n != len(buf):
+					buf = buf[n:]
+					pending.add(send_fd)
+				else:
+					buf = ''
+
+				send_buffers[send_fd] = buf
 
 			logging.debug("Buffer after decode: length %d", len(buf))
 			buffers[fd] = buf
