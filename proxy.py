@@ -2,7 +2,7 @@ from socket import socket
 from socket import error as socket_error
 from select import select
 from select import error as select_error
-import sys, os, time, traceback
+import sys, os, time, traceback, errno
 import simple_logging as logging
 from types import InstanceType
 
@@ -19,7 +19,7 @@ from plugins import plugins
 conn_map = {} # Map from in_sock to out_sock (for both directions)
 user_map = {} # Map from sock to user data
 user_socks = set() # Collection of socks to users
-buffers = {} # Map from fd to a read buffer
+read_buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
 
@@ -33,7 +33,7 @@ def main():
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0)
-	logging.init(lambda level, msg: (True) and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
+	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
@@ -171,8 +171,8 @@ def main():
 
 
 def drop_connection(user):
-	user_fd = user.user_fd
-	srv_fd = user.srv_fd
+	user_fd = user.user_sock
+	srv_fd = user.srv_sock
 	user_fd.close()
 	srv_fd.close()
 	del conn_map[user_fd]

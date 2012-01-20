@@ -84,7 +84,7 @@ names = {
 	0x14:	"Named entity spawn",
 	0x15:	"Pickup spawn",
 	0x16:	"Collect item",
-	0x17:	"Add object/vehicle",
+	0x17:	"Add object or vehicle",
 	0x18:	"Mob spawn",
 	0x19:	"Entity: painting",
 	0x1A:	"Experience Orb",
@@ -109,7 +109,7 @@ names = {
 	0x36:	"Block action",
 	0x3C:	"Explosion",
 	0x3D:	"Sound effect",
-	0x46:	"New/invalid state",
+	0x46:	"New or invalid state",
 	0x47:	"Thunderbolt",
 	0x64:	"Open window",
 	0x65:	"Close window",
@@ -280,7 +280,7 @@ structs = {
 	0x16: (
 		("int", "subject_entity_id"),
 		("int", "object_entity_id")),
-	#Add object/vehicle
+	#Add object or vehicle
 	0x17: (
 		("int", "entity_id"),
 		("byte", "type"),
@@ -432,7 +432,7 @@ structs = {
 		("byte", "y"),
 		("int", "z"),
 		("int", "extra")),
-	#New/invalid state
+	#New or invalid state
 	0x46: (
 		("byte", "reason"),
 		("byte", "gamemode")),
