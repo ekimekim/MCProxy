@@ -1,15 +1,12 @@
 from socket import socket
 from socket import error as socket_error
-from signal import signal, siginterrupt, SIGIO, SIGUSR1
-from fcntl import fcntl, F_GETFL, F_SETFL, F_SETOWN
-from os import O_ASYNC, O_NONBLOCK
 from select import select
 from select import error as select_error
-import sys, os, time
+import sys, os, time, traceback
 import simple_logging as logging
-import traceback
-from thread import allocate_lock
 from types import InstanceType
+
+import usrtrace
 
 from packet_decoder import stateless_unpack as unpack
 from packet_decoder import stateless_pack as pack
@@ -23,10 +20,8 @@ conn_map = {} # Map from in_sock to out_sock (for both directions)
 user_map = {} # Map from sock to user data
 user_socks = set() # Collection of socks to users
 buffers = {} # Map from fd to a read buffer
-send_buffers = {} # Map from fd to a send buffer
-sio_lock = allocate_lock() # Lock to emulate NOT having SA_NODEFER set. (grumble python grumble)
+send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
-pending = set() # the sockets that have pending sends
 
 def main():
 
@@ -34,6 +29,7 @@ def main():
 	listener = socket()
 	listener.bind(LISTEN_ADDR)
 	listener.listen(128)
+	listener.setblocking(0)
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0)
@@ -49,194 +45,166 @@ def main():
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
 
-	# Register handle_poll as handler for SIGIO, and traceback to log on SIGUSR1
-	signal(SIGIO, handle_poll)
-	signal(SIGUSR1, log_traceback)
-	siginterrupt(SIGIO, False)
-
 	daemonise()
+	sys.stdout = log_fd
+	sys.stderr = log_fd
 
 	logging.debug("Started up")
 
 	try:
 		while 1:
-			# Create things
+
 			try:
-				user_sock, addr = listener.accept()
-			except socket_error: # most likely an E_INTR due to SIGIO
-				continue
-			logging.info("New connection from address %s", str(addr))
-			srv_sock = socket()
-			user = User(addr=addr, user_sock=user_sock, srv_sock=srv_sock)
-			srv_sock.connect(SERVER_ADDR)
-			# Add things to global data structures
-			user_map[user_sock] = user
-			user_map[srv_sock] = user
-			conn_map[user_sock] = srv_sock
-			conn_map[srv_sock] = user_sock
-			user_socks.add(user_sock)
-			buffers[user_sock] = ''
-			buffers[srv_sock] = ''
-			send_buffers[user_sock] = ''
-			send_buffers[srv_sock] = ''
-			# Note we set async last, or else a race cdn could occur: Recieve a signal before setup is done.
-			set_async(user_sock)
-			set_async(srv_sock)
-			logging.debug("Now accepting packets from address %s", str(addr))
-			# SIGIO won't be sent if the change occured before set_async, so to be safe:
-			handle_poll(0, None)
-	except Exception:
-		logging.critical("Unhandled exception", exc_info=1)
-		listener.close()
-		sys.exit(1)
-
-
-sio_repeat = False
-def handle_poll(sig, frame):
-	"""Gets called when SIGIO is recived. Arguments are required."""
-	try:
-		global sio_lock
-		global sio_repeat
-		acquired = sio_lock.acquire(False)
-		if not acquired:
-			logging.debug("SIGIO ignored, lock active")
-			sio_repeat = True
-			return
-		if sig != SIGIO:
-			logging.debug("Recieved SIGIO (repeated)")
-		else:
-			logging.debug("Recieved SIGIO")
-		sio_repeat = False # Not safe to reset this after select() but now it's fine
-
-		# The select() call is weird. Basically, r,w,x = select(r,w,x,timeout)
-		#  where r,w,x are lists of files. It filters the lists so the output contains:
-		#  r: files ready to be read
-		#  w: files ready to be written to
-		#  x: files with some eXtraordinary condition (rare)
-		# Note that i'm looking for files that are readable, out of both the user socks AND the server socks.
-		while 1:
-			try:
-				r, w, x = select(conn_map.keys(), pending, [], SELECT_TIMEOUT)
-#				r, w, x = select(conn_map.keys(), [], [], SELECT_TIMEOUT)
+				r, w, x = select(conn_map.keys() + [listener], send_buffers.keys(), [])
 			except select_error, ex:
-				code, msg = ex
-				if msg != 'Interrupted system call':
-					raise
-			else:
-				break
+				if ex.errno == errno.EINTR:
+					continue
+				raise
 
-		dead = []
+			dead = [] # Keeps track of fds in r, w that get dropped, so we know when not to bother.
 
-		for fd in w:
-			buf = send_buffers[fd]
-			try:
-				n = fd.send(buf)
-			except socket_error:
-				n = 0
-			if n != len(buf):
-				buf = buf[n:]
-				pending.add(fd)
-			else:
-				buf = ''
-			send_buffers[fd] = buf
-			
-		for fd in r:
-			logging.debug("reading from socket %s", fd)
-			if fd in dead:
-				logging.debug("fd already down - skipping")
-				continue
-			teardown = False
-			user = user_map[fd]
-			to_server = (fd in user_socks)
-			buf = buffers[fd]
-			logging.debug("Buffer before read: length %d", len(buf))
-			while 1: # Get everything there is to read
+			for fd in w:
+				if fd in dead:
+					logging.debug("fd already down - skipping")
+					continue
+
+				buf = send_buffers[fd]
+
 				try:
-					read = fd.recv(1024)
+					n = fd.send(buf[:MAX_SEND])
 				except socket_error, ex:
-					break # Stop while loop - we've read all we can
+					if ex.errno == errno.EINTR:
+						n = 0
+					elif ex.errno in (errno.ECONNRESET, errno.EPIPE, errno.ENETDOWN, errno.ENETUNREACH, errno.ENOBUFS):
+						# These are all socket failure conditions, drop the connection
+						user = user_map[fd]
+						logging.warning("Dropping connection for %s due to send error to %s", user, "user" if fd in user_socks else "server", exc_info=1)
+						dead += [fd, conn_map[fd]]
+						drop_connection(user)
+						continue
+					else:
+						raise
+
+				assert n <= len(buf)
+				if n < len(buf):
+					send_buffers[fd] = buf[n:]
+				else:
+					del send_buffers[fd]
+
+			for fd in r:
+				if fd in dead:
+					logging.debug("fd already down - skipping")
+					continue
+
+				if fd is listener:
+					# Then Cicero asks what did the Night Mother say?
+					new_connection()
+					continue
+
+				buf = read_buffers[fd]
+				to_server = (fd in user_socks)
+				user = user_map[fd]
+
+				logging.debug("Buffer before read: length %d", len(buf))
+				try:
+					read = fd.recv(MAX_RECV)
+				except socket_error, ex:
+					# TODO
 				if not read:
 					# Empty read means EOF - i think.
 					if to_server:
-						logging.info("Connection from %s closed", user.addr)
+						logging.info("Connection from %s closed", user)
 					else:
-						logging.info("Server connection for %s closed", user.addr)
-					teardown = True
-					break
+						logging.info("Server connection for %s closed", user)
+					dead += [fd, conn_map[fd]]
+					drop_connection(user)
+					continue
+
 				buf += read
+				logging.debug("Buffer after read: length %d", len(buf))
 
-			logging.debug("Buffer after read: length %d", len(buf))
-			while 1:
-				try:
-					packet, buf = unpack(buf, to_server)
-				except: # Undefined exception inherited from packet_decoder
-					logging.exception("Bad packet %s %s: %s", "from" if to_server else "to", user.addr, hexdump(buf))
-					teardown = True
-					logging.warning("Dropping connection for %s", user.addr)
-					break
+				# Decode as many packets as we can
+				while 1:
+					try:
+						packet, buf = unpack(buf, to_server)
+					except: # Undefined exception inherited from packet_decoder
+						logging.exception("Bad packet %s %s:\n%s", "from" if to_server else "to", user, hexdump(buf))
+						logging.warning("Dropping connection for %s due to bad packet from %s", user, "user" if to_server else "server")
+						dead += [fd, conn_map[fd]]
+						drop_connection(user)
+						break
+					if packet is None:
+						# Couldn't decode, need more read first - we're done here.
+						break
 
-				if packet is None:
-					break
+					packets = handle_packet(packet, user, to_server)
+					packed = []
+					for packet in packets:
+						try:
+							packed.append(pack(packet, to_server))
+						except: # Undefined exception inherited from packet_decoder
+							logging.warning("Bad packet object while packing packet %s %s: %s", "from" if to_server else "to", user, packet, exc_info=1)
 
-#				logging.debug("packet %s %s: %s", "from" if to_server else "to", user.addr,  packet)
-				packets = handle_packet(packet, user, to_server)
-				try:
-					out_bytestr = ''.join([pack(packet, to_server) for packet in packets])
-				except: # Undefined exception inherited from packet_decoder
-					logging.exception("Bad packet object while packing packet %s %s: %s", "from" if to_server else "to", user.addr, packet)
-					teardown = True
-					logging.warning("Dropping connection for %s", user.addr)
-					break
+					out_bytestr = ''.join(packed)
 
-#				conn_map[fd].send(out_bytestr)
-				send_fd = conn_map[fd]
-				write_buf = send_buffers[send_fd]
-				write_buf += out_bytestr
-				try:
-					n = send_fd.send(write_buf)
-				except socket_error:
-					n = 0
-				if n != len(write_buf):
-					write_buf = write_buf[n:]
-					pending.add(send_fd)
-				else:
-					write_buf = ''
-				send_buffers[send_fd] = write_buf
+					# Append resulting bytestr to write buffer, to be sent later.
+					send_fd = conn_map[fd]
+					write_buf = send_buffers.get(send_fd, '')
+					write_buf += out_bytestr
+					send_buffers[send_fd] = write_buf
 
-			logging.debug("Buffer after decode: length %d", len(buf))
-			buffers[fd] = buf
-			if teardown:
-				if to_server:
-					user_fd = fd
-					srv_fd = conn_map[fd]
-				else:
-					srv_fd = fd
-					user_fd = conn_map[fd]
-				dead += [user_fd, srv_fd]
-				user_fd.close()
-				srv_fd.close()
-				del conn_map[user_fd]
-				del conn_map[srv_fd]
-				del user_map[user_fd]
-				del user_map[srv_fd]
-				del buffers[user_fd]
-				del buffers[srv_fd]
-				user_socks.remove(user_fd)
-				if user_fd in pending:
-					pending.remove(user_fd)
-				if srv_fd in pending:
-					pending.remove(srv_fd)
-				logging.info("Removed socket pair for %s", user.addr)
+				if fd not in dead:
+					logging.debug("Buffer after decode: length %d", len(buf))
+					read_buffers[fd] = buf
 
-		sio_lock.release()
-		if sio_repeat:
-			logging.debug("Extra SIGIO occured during handling, repeat")
-			handle_poll(0,frame)
-		logging.debug("exiting handler")
 	except Exception:
 		logging.critical("Unhandled exception", exc_info=1)
 		listener.close()
 		sys.exit(1)
+
+
+def drop_connection(user):
+	user_fd = user.user_fd
+	srv_fd = user.srv_fd
+	user_fd.close()
+	srv_fd.close()
+	del conn_map[user_fd]
+	del conn_map[srv_fd]
+	del user_map[user_fd]
+	del user_map[srv_fd]
+	del read_buffers[user_fd]
+	del read_buffers[srv_fd]
+	user_socks.remove(user_fd)
+	if user_fd in send_buffers:
+		del send_buffers[user_fd]
+	if srv_fd in send_buffers:
+		del send_buffers[srv_fd]
+	logging.info("Removed socket pair for %s", user)
+
+
+def new_connection():
+	try:
+		user_sock, addr = listener.accept()
+	except socket_error, ex:
+		if ex.errno == errno.EINTR: # Harmless - interrupted. Leave it be and it will be tried again next pass.
+			return
+		raise
+	logging.info("New connection from address %s", str(addr))
+	# Setup objects
+	srv_sock = socket()
+	user = User(addr=addr, user_sock=user_sock, srv_sock=srv_sock)
+	srv_sock.connect(SERVER_ADDR)
+	user_sock.setblocking(0)
+	srv_sock.setblocking(0)
+	# Add things to global data structures
+	user_map[user_sock] = user
+	user_map[srv_sock] = user
+	conn_map[user_sock] = srv_sock
+	conn_map[srv_sock] = user_sock
+	user_socks.add(user_sock)
+	read_buffers[user_sock] = ''
+	read_buffers[srv_sock] = ''
+	logging.debug("Now accepting packets from address %s", str(addr))
 
 
 def daemonise():
@@ -258,6 +226,8 @@ def handle_packet(packet, user, to_server):
 		to_server: True if packet is user->server, else False.
 		addr: The user packet is being sent from/to.
 	Return a list of packet objects to send to out stream (normally [the same packet])"""
+	ispacket = lambda x: type(x) == InstanceType and isinstance(x, Packet)
+
 	packets = [packet]
 	for plugin in plugins:
 		old_packets = packets
@@ -265,7 +235,6 @@ def handle_packet(packet, user, to_server):
 		for packet in old_packets:
 			try:
 				ret = plugin.on_packet(packet, user, to_server)
-				ispacket = lambda x: type(x) == InstanceType and isinstance(x, Packet)
 				if type(ret) == list:
 					assert all(ispacket(x) for x in ret), "Return value not list of packets: %s" % repr(ret)
 					packets += ret
@@ -287,25 +256,18 @@ def send_packet(packet, user, to_server):
 	try:
 		out_bytestr = ''.join([pack(packet, to_server) for packet in packets])
 	except: # Undefined exception inherited from packet_decoder
-		logging.exception("Bad packet object while packing generated packet %s %s: %s", "from" if to_server else "to", user.addr, packet)
+		logging.exception("Bad packet object while packing generated packet %s %s: %s", "from" if to_server else "to", user, packet)
 		raise # Will be caught as a failure of the plugin sending it.
 
-	if to_server:
-		user.srv_sock.send(out_bytestr)
-	else:
-		user.user_sock.send(out_bytestr)
-
-
-def set_async(fd):
-	"""Use low-level unix fcntl calls to set ASYNC and NONBLOCK flags, and direct SIGIO to this process."""
-	flags = fcntl(fd, F_GETFL)
-	fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK)
-	fcntl(fd, F_SETOWN, os.getpid())
+	fd = user.srv_sock if to_server else user.user_sock
+	write_buf = send_buffers.get(fd, '')
+	write_buf += out_bytestr
+	send_buffers[fd] = write_buf
 
 
 def hexdump(s):
 	"""Returns a string representation of a bytestring"""
-	STEP = 10
+	STEP = 18 # Optimal per-line for screen width 80
 	PRINTING = [chr(n) for n in range(32,127)]
 	result = ''
 	for offset in range(0, len(s), STEP):
@@ -331,6 +293,14 @@ class User(object):
 	"""
 	def __init__(self, **kwargs):
 		self.__dict__ = kwargs
+	def __str__(self):
+		d = self.__dict__ # I'm lazy and don't like underscores
+		if 'addr' not in d:
+			return repr(self)
+		elif 'username' not in d:
+			return "<unknown>@%s:%s" % self.addr
+		else:
+			return "%s@%s:%s" % ((self.username,) + self.addr)
 
 
 if __name__=='__main__':
