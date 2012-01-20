@@ -109,7 +109,14 @@ def main():
 				try:
 					read = fd.recv(MAX_RECV)
 				except socket_error, ex:
-					# TODO
+					if ex.errno == errno.EINTR:
+						continue
+					if ex.errno in (errno.ECONNRESET, errno.ETIMEDOUT, errno.ENOBUFS, errno.ENOMEM):
+						# These are all socket failure conditions, drop the connection
+						logging.warning("Dropping connection for %s due to recv error from %s", user, "user" if to_server else "server", exc_info=1)
+						dead += [fd, conn_map[fd]]
+						drop_connection(user)
+						continue
 				if not read:
 					# Empty read means EOF - i think.
 					if to_server:
