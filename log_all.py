@@ -4,9 +4,10 @@ f = None
 
 def on_start():
 	global f
-	f = open("log_all.log", 'a')
+	f = open("/var/minecraft/logs/all_packets.log", 'a')
 
 def on_packet(packet, user, to_server):
 	global f
-	f.write('\t'.join([str(time.time()), str(user.addr), str(packet)]) + '\n')
+	f.write('\t'.join([str(time.time()), str(user.addr), repr(packet.original), str(packet)]) + '\n')
+	f.flush()
 	return packet

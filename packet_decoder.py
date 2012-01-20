@@ -19,6 +19,8 @@ EVENT_CLIENT_CONNECT = 0x00
 EVENT_CLIENT_DISCONNECT = 0x01
 EVENT_SERVER_DISCONNECT = 0x02
 
+PROTOCOL_VERSION = 23
+
 class Packet:
 	def __init__(self):
 		self.direction = 0
@@ -86,7 +88,7 @@ names = {
 	0x18:	"Mob spawn",
 	0x19:	"Entity: painting",
 	0x1A:	"Experience Orb",
-	0x1B:	"Stance update",
+	0x1B:	"Stance update (DEPRECATED)",
 	0x1C:	"Entity velocity",
 	0x1D:	"Destroy entity",
 	0x1E:	"Entity",
@@ -122,6 +124,7 @@ names = {
 	0x83:	"Map data",
 	0xC8:	"Increment statistic",
 	0xC9:	"Player List Item",
+	0xFA:	"Plugin message",
 	0xFE:	"Server list ping",
 	0xFF:	"Disconnect"
 }
@@ -135,6 +138,7 @@ structs = {
 			("int", "protocol_version"),
 			("string16", "username"),
 			("long", "map_seed"),
+			("string16", "level type"),
 			("int", "server_mode"),
 			("byte", "dimension"),
 			("byte", "difficulty"),
@@ -144,6 +148,7 @@ structs = {
 			("int", "entity_id"),
 			("string16", "unknown"),
 			("long", "map_seed"),
+			("string16", "level type"),
 			("int", "server_mode"),
 			("byte", "dimension"),
 			("byte", "difficulty"),
@@ -184,7 +189,8 @@ structs = {
 		("byte", "difficulty"),
 		("byte", "server_mode"),
 		("short", "world_height"),
-		("long", "map_seed")),
+		("long", "map_seed"),
+		("string16", "level_type")),
 	#Player
 	0x0A: ("bool", "on_ground"),
 	#Player position
@@ -441,7 +447,7 @@ structs = {
 	0x64: (
 		("byte", "window_id"),
 		("byte", "inventory_type"),
-		("string8", "window_title"),
+		("string16", "window_title"),
 		("byte", "slots_count")),
 	#Close window
 	0x65: ("byte", "window_id"),

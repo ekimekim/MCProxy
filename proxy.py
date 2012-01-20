@@ -37,7 +37,7 @@ def main():
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0)
-	logging.init(lambda level, msg: log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg)))
+	logging.init(lambda level, msg: (True) and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
@@ -117,6 +117,7 @@ def handle_poll(sig, frame):
 		while 1:
 			try:
 				r, w, x = select(conn_map.keys(), pending, [], SELECT_TIMEOUT)
+#				r, w, x = select(conn_map.keys(), [], [], SELECT_TIMEOUT)
 			except select_error, ex:
 				code, msg = ex
 				if msg != 'Interrupted system call':
@@ -126,8 +127,6 @@ def handle_poll(sig, frame):
 
 		dead = []
 
-		logging.debug("%s\n%s", r, w)
-
 		for fd in w:
 			buf = send_buffers[fd]
 			try:
@@ -136,7 +135,7 @@ def handle_poll(sig, frame):
 				n = 0
 			if n != len(buf):
 				buf = buf[n:]
-				pending.add(send_fd)
+				pending.add(fd)
 			else:
 				buf = ''
 			send_buffers[fd] = buf
@@ -171,7 +170,7 @@ def handle_poll(sig, frame):
 				try:
 					packet, buf = unpack(buf, to_server)
 				except: # Undefined exception inherited from packet_decoder
-					logging.exception("Bad packet %s %s: %s", "from" if to_server else "to", user.addr, repr(buf))
+					logging.exception("Bad packet %s %s: %s", "from" if to_server else "to", user.addr, hexdump(buf))
 					teardown = True
 					logging.warning("Dropping connection for %s", user.addr)
 					break
@@ -189,20 +188,20 @@ def handle_poll(sig, frame):
 					logging.warning("Dropping connection for %s", user.addr)
 					break
 
+#				conn_map[fd].send(out_bytestr)
 				send_fd = conn_map[fd]
-				buf = send_buffers[send_fd]
-				buf += out_bytestr
+				write_buf = send_buffers[send_fd]
+				write_buf += out_bytestr
 				try:
-					n = send_fd.send(buf)
+					n = send_fd.send(write_buf)
 				except socket_error:
 					n = 0
-				if n != len(buf):
-					buf = buf[n:]
+				if n != len(write_buf):
+					write_buf = write_buf[n:]
 					pending.add(send_fd)
 				else:
-					buf = ''
-
-				send_buffers[send_fd] = buf
+					write_buf = ''
+				send_buffers[send_fd] = write_buf
 
 			logging.debug("Buffer after decode: length %d", len(buf))
 			buffers[fd] = buf
@@ -223,6 +222,10 @@ def handle_poll(sig, frame):
 				del buffers[user_fd]
 				del buffers[srv_fd]
 				user_socks.remove(user_fd)
+				if user_fd in pending:
+					pending.remove(user_fd)
+				if srv_fd in pending:
+					pending.remove(srv_fd)
 				logging.info("Removed socket pair for %s", user.addr)
 
 		sio_lock.release()
@@ -298,6 +301,20 @@ def set_async(fd):
 	flags = fcntl(fd, F_GETFL)
 	fcntl(fd, F_SETFL, flags | O_ASYNC | O_NONBLOCK)
 	fcntl(fd, F_SETOWN, os.getpid())
+
+
+def hexdump(s):
+	"""Returns a string representation of a bytestring"""
+	STEP = 10
+	PRINTING = [chr(n) for n in range(32,127)]
+	result = ''
+	for offset in range(0, len(s), STEP):
+		slice = s[offset:offset+STEP]
+		result += ' '.join(['%02x' % ord(c) for c in slice])
+		result += '        '
+		result += ''.join([c if c in PRINTING else '.' for c in slice])
+		result += '\n'
+	return result
 
 
 def log_traceback(sig, frame):
