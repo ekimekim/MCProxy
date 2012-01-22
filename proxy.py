@@ -40,6 +40,7 @@ def main():
 		try:
 			logging.debug("Loading plugin: %s", plugin)
 			plugin.send = send_packet
+			plugin.cmd = server_cmd
 			plugin.on_start()
 		except:
 			logging.exception("Error initialising plugin %s", plugin)
@@ -290,6 +291,16 @@ def log_traceback(sig, frame):
 	tb = traceback.format_stack()
 	tb = ''.join(tb)
 	logging.info("Recieved SIGUSR1, printing traceback:\n" + tb)
+
+
+def server_cmd(command):
+	"""Send a command to server console. May OSError."""
+	p = Popen([COMMAND_SCRIPT, command], stderr=PIPE)
+	ret = p.wait()
+	if ret:
+		out, err = p.communicate()
+		raise OSError(command, ret, err.read().strip())
+	return
 
 
 class User(object):
