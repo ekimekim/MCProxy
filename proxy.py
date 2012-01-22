@@ -2,6 +2,7 @@ from socket import socket
 from socket import error as socket_error
 from select import select
 from select import error as select_error
+from subprocess import PIPE, Popen
 import sys, os, time, traceback, errno
 import simple_logging as logging
 from types import InstanceType
