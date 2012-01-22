@@ -768,6 +768,8 @@ class PacketDecoder:
 		except IncompleteData:
 			self.buff = backup
 			return None
+		except Exception, ex:
+			ex.args += (self.buff[20:],)
 
 
 	def encode_packet(self, packet):

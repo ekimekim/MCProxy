@@ -35,7 +35,8 @@ def gzip(s):
 	sio = StringIO()
 	gz = GzipFile(fileobj=sio, mode='w')
 	gz.write(s)
-	return sio.getvalue()
+	sio.seek(0)
+	return sio.read()
 
 
 class NBTCompound(dict):
