@@ -15,7 +15,6 @@ from packet_decoder import Packet
 
 from config import *
 
-from plugins import plugins
 
 conn_map = {} # Map from in_sock to out_sock (for both directions)
 user_map = {} # Map from sock to user data
@@ -23,6 +22,7 @@ user_socks = set() # Collection of socks to users
 read_buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
+
 
 def main():
 
@@ -37,11 +37,10 @@ def main():
 	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
+	from plugins import plugins # Lazy import prevents circular references
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
 		try:
 			logging.debug("Loading plugin: %s", plugin)
-			plugin.send = send_packet
-			plugin.cmd = server_cmd
 			plugin.on_start()
 		except:
 			logging.exception("Error initialising plugin %s", plugin)
@@ -258,8 +257,10 @@ def handle_packet(packet, user, to_server):
 
 
 def send_packet(packet, user, to_server):
-	"""Takes same args as handle_packet.
-	Simulates that kind of packet having been recived and passes it on as normal"""
+	"""Takes packet, user object and whether to send to server (as though from user) or vice versa.
+	Simulates that kind of packet having been recived and passes it on as normal,
+	ie. a packet still goes through the whole list of plugins.
+	"""
 	packets = handle_packet(packet, user, to_server)
 	
 	try:
