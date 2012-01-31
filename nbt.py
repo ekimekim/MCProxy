@@ -35,6 +35,7 @@ def gzip(s):
 	sio = StringIO()
 	gz = GzipFile(fileobj=sio, mode='w')
 	gz.write(s)
+	gz.close()
 	sio.seek(0)
 	return sio.read()
 

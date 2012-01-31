@@ -8,6 +8,7 @@ def on_start():
 
 def on_packet(packet, user, to_server):
 	if hasattr(packet, 'original'):
-		reencoded = packet_decoder.stateless_pack(packet)
+		reencoded = packet_decoder.stateless_pack(packet, to_server)
 		if packet.original != reencoded:
-			raise Exception("Packet (%s) changed: Reencodes to %s, not %s" % (packet, repr(reencoded), repr(packet.original))
+			raise Exception("Packet (%s) changed: Reencodes to %s, not %s" % (packet, repr(reencoded), repr(packet.original)))
+		return packet

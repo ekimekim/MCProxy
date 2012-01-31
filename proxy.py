@@ -23,6 +23,7 @@ read_buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
 
+plugins = []
 
 def main():
 
@@ -37,7 +38,9 @@ def main():
 	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
-	from plugins import plugins # Lazy import prevents circular references
+	from plugins import plugins as _plugins # Lazy import prevents circular references
+	global plugins
+	plugins = _plugins
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
 		try:
 			logging.debug("Loading plugin: %s", plugin)
