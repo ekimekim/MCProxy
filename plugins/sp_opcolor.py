@@ -1,3 +1,4 @@
+# -*- coding: cp1252 -*-
 
 AUTHOR='sleepyparadox'
 CONTACT='sleepyparadox@gmail.com'
@@ -31,23 +32,23 @@ def on_packet(packet, user, to_server):
 def color(name):
 	"""Takes a color name and returns the string needed to turn the chat message that color."""
 	color_map = {
-		'black': '0',
-		'dark blue': '1',
-		'dark green': '2',
-		'dark cyan': '3',
-		'dark red': '4',
-		'purple': '5',
-		'gold': '6',
-		'gray': '7',
-		'dark gray': '8',
-		'blue': '9',
-		'green': 'a',
-		'cyan': 'b',
-		'red': 'c',
-		'pink': 'd',
-		'yellow': 'e',
-		'white': 'f'
+		'black': u'0',
+		'dark blue': u'1',
+		'dark green': u'2',
+		'dark cyan': u'3',
+		'dark red': u'4',
+		'purple': u'5',
+		'gold': u'6',
+		'gray': u'7',
+		'dark gray': u'8',
+		'blue': u'9',
+		'green': u'a',
+		'cyan': u'b',
+		'red': u'c',
+		'pink': u'd',
+		'yellow': u'e',
+		'white': u'f'
 	}
 	if color not in color_map:
 		raise ValueError('Bad color')
-	return '§' + color_map[color]
+	return u'§' + color_map[color]
