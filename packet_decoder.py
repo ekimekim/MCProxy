@@ -2,7 +2,6 @@
 
 import struct
 import sys
-import nbt
 
 #TODO: Review which of these we actually need
 NODE_SERVER = 0x01
@@ -552,8 +551,6 @@ class PacketDecoder:
 				if nbtdata is None:
 					o += self.pack('short', -1)
 				else:
-					nbtdata = nbt.encode(nbtdata)
-					nbtdata = nbt.gzip(nbtdata)
 					nbt_len = len(nbtdata)
 					o += self.pack('short', nbt_len)
 					o += nbtdata
@@ -619,7 +616,7 @@ class PacketDecoder:
 				else:
 					extra_buff = self.buff[:extra_len]
 					self.buff = self.buff[extra_len:]
-					o["extra"] = nbt.decode(nbt.gunzip(self.buff))
+					o["extra"] = extra_buff
 			return o
 		if data_type == "metadata":
 			#[(17, 0), (0, 0), (16, -1)]
