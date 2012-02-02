@@ -611,6 +611,7 @@ class PacketDecoder:
 			if o["id"] > 0:
 				o["amount"] = self.unpack('byte')
 				o["damage"] = self.unpack('short')
+			print o
 			if o["id"] in SLOT_EXTRA_DATA_IDS:
 				extra_len = self.unpack('short')
 				if extra_len <= 0:
@@ -694,7 +695,7 @@ class PacketDecoder:
 		"""
 
 		#self.debug("READ BUFFER SIZE: %d" % len(self.buff))
-		backup = self.buff
+		backup = self.buff[:]
 		packet = Packet()
 		try:
 			packet.direction = self.node
@@ -753,7 +754,7 @@ class PacketDecoder:
 			if packet.ident == 0x82:
 				packet.data["text"] = []
 				for i in range(4):
-					packet.data["text"].append(packet.data.pop("line_%s" % (i+1)))
+					packet.data["text"].append(packet.data["line_%s" % (i+1)])
 					
 			#0x83
 			if packet.ident == 0x83:
@@ -770,6 +771,7 @@ class PacketDecoder:
 			return None
 		except Exception, ex:
 			ex.args += (self.buff[20:],)
+			raise
 
 
 	def encode_packet(self, packet):
@@ -819,7 +821,6 @@ class PacketDecoder:
 			if packet.ident == 0x82:
 				for i in range(4):
 					packet.data["line_%s" % (i+1)] = packet.data["text"][i]
-				del packet.data["text"]
 			#0x83
 			if packet.ident == 0x83:
 				packet.data['data_size'] = len(packet.data['data'])

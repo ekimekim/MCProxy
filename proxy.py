@@ -35,7 +35,7 @@ def main():
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0)
-	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
+	logging.init(lambda level, msg: (True or level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
 	from plugins import plugins as _plugins # Lazy import prevents circular references
@@ -101,7 +101,6 @@ def main():
 					continue
 
 				if fd is listener:
-					# Then Cicero asks what did the Night Mother say?
 					new_connection()
 					continue
 
@@ -131,6 +130,7 @@ def main():
 					drop_connection(user)
 					continue
 
+				logging.debug("Read %s server for %s: %s", "to" if to_server else "from", user, repr(read))
 				buf += read
 				logging.debug("Buffer after read: length %d", len(buf))
 
@@ -147,6 +147,8 @@ def main():
 					if packet is None:
 						# Couldn't decode, need more read first - we're done here.
 						break
+
+					logging.debug("%s server for %s: %s", "to" if to_server else "from", user, packet)
 
 					packets = handle_packet(packet, user, to_server)
 					packed = []
