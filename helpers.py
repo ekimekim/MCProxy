@@ -9,4 +9,6 @@ from config import *
 
 def ops():
 	"""Get list of op usernames."""
-	open(os.path.join(SERVER_DIR, 'ops.txt'))
+	ret = open(os.path.join(SERVER_DIR, 'ops.txt')).read().strip().split('\n')
+	ret = [unicode(name) for name in ret]
+	return ret
