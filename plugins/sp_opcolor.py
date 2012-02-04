@@ -10,6 +10,7 @@ from packet_decoder import Packet
 from helpers import ops, color
 
 opColor = color('red')
+userColor = color('dark cyan')
 
 def on_start():
     pass
@@ -21,6 +22,7 @@ def on_packet(packet, user, to_server):
             for op in ops():
                 #insert op color flag before name and normal color flag after name
                 packet.data['text'] = packet.data['text'].replace(op, opColor + op + color('white'))
+            packet.data['text'] = packet.data['text'].replace(user.username, userColor + user.username + color('white'))
                 
             #replace 'bitblitz' with developer name 'Sleepy Paradox'
             packet.data['text'] = packet.data['text'].replace(u'bitblitz', u'Sleepy Paradox')
