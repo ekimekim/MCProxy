@@ -35,7 +35,7 @@ def main():
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0)
-	logging.init(lambda level, msg: (True or level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
+	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
 	from plugins import plugins as _plugins # Lazy import prevents circular references
@@ -48,6 +48,8 @@ def main():
 		except:
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
+
+	print 'proxy: Daemonising...'
 
 	daemonise()
 	sys.stdout = log_fd

@@ -530,7 +530,6 @@ class PacketDecoder:
 			o = o[packet.direction]
 		if len(o) and not isinstance(o[0], tuple):
 			o = (o),
-		#print o
 		return o
 
 
@@ -558,9 +557,7 @@ class PacketDecoder:
 		if data_type == "metadata":
 			o = ''
 			for mtype, val in data:
-				#print "Packing", mtype, val
 				mtype2 = mtype >> 5
-				#print "mtype2 is", mtype2
 				o += self.pack('byte', mtype)
 				if mtype2 == 0: o += self.pack('byte', val) 
 				if mtype2 == 1: o += self.pack('short', val) 
@@ -608,12 +605,13 @@ class PacketDecoder:
 			if o["id"] > 0:
 				o["amount"] = self.unpack('byte')
 				o["damage"] = self.unpack('short')
-			print o
 			if o["id"] in SLOT_EXTRA_DATA_IDS:
 				extra_len = self.unpack('short')
 				if extra_len <= 0:
 					o["extra"] = None
 				else:
+					if len(self.buff) < extra_len:
+						raise IncompleteData()
 					extra_buff = self.buff[:extra_len]
 					self.buff = self.buff[extra_len:]
 					o["extra"] = extra_buff
@@ -767,6 +765,7 @@ class PacketDecoder:
 			self.buff = backup
 			return None
 		except Exception, ex:
+			self.buff = backup
 			ex.args += (self.buff[20:],)
 			raise
 
@@ -827,26 +826,6 @@ class PacketDecoder:
 				output += self.pack(i[0], packet.data[i[1]])
 			
 			output += append
-			# Is this meant to be a multiline comment? Seriously?
-			"""
-			if hasattr(packet, "original") and output != packet.original:
-				f1 = open('err1.bin', 'w')
-				f1.write(packet.original)
-				f1.close()
-				f2 = open('err2.bin', 'w')
-				f2.write(output)
-				f2.close()
-				self.debug("Packet mis-match!")
-				self.debug("ID: %x" % packet.ident)
-				print packet.data
-				sys.exit(1)"""
-			"""if len(output) != len(packet.original):
-				print "%x\tXX %i\t%i" % (packet.ident, len(packet.original), len(output))
-				print "APPEND: %i" % len(append)
-				print packet.data
-			else:
-				print "OK"
-				print "%x\tOK %i\t%i" % (packet.ident, len(packet.original), len(output))"""
 			return output
 		except:
 			raise
