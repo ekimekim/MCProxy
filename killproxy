@@ -1,4 +1,10 @@
 #!/bin/bash
 
-{ ps aux | grep 'python proxy\.py' | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null ; } &&
+if [ "$1" == "debug" ]; then
+	name="python proxy\.py debug"
+else
+	name="python proxy\.py"
+fi
+
+{ ps aux | grep "$name" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null ; } &&
 	echo "Killed proxy"

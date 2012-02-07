@@ -9,27 +9,39 @@ Colours have sensible defaults but are configurable with in-game commands:
 """
 
 from packet_decoder import Packet
-from helpers import ops, color
+from helpers import ops, color, colors, all_users, active_users, tell
+import player_cmd as cmd
 
-opColor = color('red')
-userColor = color('dark cyan')
+defaults = {
+	'all': color('white'),
+	'inactive': color('dark gray'),
+	'active': color('gray'),
+	'ops': color('red'),
+	'me': color('dark cyan')
+}
+
+users = {}
 
 def on_start():
 	cmd.register('/color (.*)', on_command)
+	cmd.register('/color ?', no_command)
 
-def on_packet(packet, user, to_server):
-    if packet.name() == 'Chat message':
-        #Highlight admin names in red
-        if not to_server:
-            for op in ops():
-                #insert op color flag before name and normal color flag after name
-                packet.data['text'] = packet.data['text'].replace(op, opColor + op + color('white'))
-            packet.data['text'] = packet.data['text'].replace(user.username, userColor + user.username + color('white'))
-                
-            #replace 'bitblitz' with developer name 'Sleepy Paradox'
-            packet.data['text'] = packet.data['text'].replace(u'bitblitz', u'Sleepy Paradox')
-    #return edited packet
-    return packet
+def on_packet(packet, user_obj, to_server):
+	if packet.name() == 'Chat message' and not to_server:
+		prefs = users.get(user_obj.username, defaults)
+		offlines = dict([(user, prefs['inactive']) for user in all_users()])
+		onlines = dict([(user, prefs['active']) for user in active_users()])
+		ops_dict = dict([(user, prefs['ops']) for user in ops()])
+		player = {user_obj.username: prefs['me']}
+		names = {}
+		names.update(offlines)
+		names.update(onlines)
+		names.update(ops_dict)
+		names.update(player)
+		packet.data['text'] = prefs['all'] + packet.data['text']
+		for name in names:
+			packet.data['text'] = packet.data['text'].replace(name, names[name] + name + prefs['all'])
+	return packet
 
 HELP = """Chat color commands:
 /color help - This message
@@ -43,8 +55,27 @@ ___Note: Only you see the new color, not everyone.
 Replace X with the color you want, as given by /color colors."""
 
 def on_command(message, user, command):
-	verb, value = command.split(' ', 1)
+	parts = command.split(' ', 1)
+	if len(parts) == 2:
+		verb, value = parts
+	else:
+		verb = parts[0]
 	if verb == 'help':
-		user.tell(HELP)
-	elif verb in user.setcolors:
-		if value in color.colors
+		tell(user, HELP)
+	elif verb == 'colors':
+		for c in colors:
+			prefs = users.get(user.username, defaults)
+			tell(user, 'color: %s"%s"%s' % (color(c), c, prefs['all']))
+	elif verb in defaults:
+		if value in colors:
+			prefs = users.get(user.username, defaults.copy())
+			prefs[verb] = color(value)
+			users[user.username] = prefs
+		else:
+			tell(user, 'color: That is not a valid color!')
+	else:
+		tell(user, 'color: Bad command. Try "/color help"')
+
+
+def no_command(message, user):
+	tell(user, 'Modify user colors! Type "/color help".')

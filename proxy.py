@@ -34,11 +34,16 @@ def main():
 	listener.setblocking(0)
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
-	log_fd = open(LOG_FILE, 'a', 0)
+	log_fd = open(LOG_FILE, 'a', 0) if not DEBUG else sys.stderr
 	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
 
+	import helpers # Hax before import does important hax
+	helpers.active_users = active_users
+	helpers.send_packet = send_packet
+
 	from plugins import plugins as _plugins # Lazy import prevents circular references
+
 	global plugins
 	plugins = _plugins
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
@@ -49,11 +54,11 @@ def main():
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
 
-	print 'proxy: Daemonising...'
-
-	daemonise()
-	sys.stdout = log_fd
-	sys.stderr = log_fd
+	if not DEBUG:
+		print 'proxy: Daemonising...'
+		daemonise()
+		sys.stdout = log_fd
+		sys.stderr = log_fd
 
 	logging.debug("Started up")
 
@@ -132,7 +137,7 @@ def main():
 					drop_connection(user)
 					continue
 
-				logging.debug("Read %s server for %s: %s", "to" if to_server else "from", user, repr(read))
+				# logging.debug("Read %s server for %s: %s", "to" if to_server else "from", user, repr(read))
 				buf += read
 				logging.debug("Buffer after read: length %d", len(buf))
 
@@ -150,7 +155,7 @@ def main():
 						# Couldn't decode, need more read first - we're done here.
 						break
 
-					logging.debug("%s server for %s: %s", "to" if to_server else "from", user, packet)
+					# logging.debug("%s server for %s: %s", "to" if to_server else "from", user, packet)
 
 					packets = handle_packet(packet, user, to_server)
 					packed = []
@@ -302,16 +307,6 @@ def log_traceback(sig, frame):
 	logging.info("Recieved SIGUSR1, printing traceback:\n" + tb)
 
 
-def server_cmd(command):
-	"""Send a command to server console. May OSError."""
-	p = Popen([COMMAND_SCRIPT, command], stderr=PIPE)
-	ret = p.wait()
-	if ret:
-		out, err = p.communicate()
-		raise OSError(command, ret, err.read().strip())
-	return
-
-
 class User(object):
 	"""An object representing a user. Should always contain an addr = (ip, port).
 	Should also have user_sock and srv_sock.
@@ -328,6 +323,16 @@ class User(object):
 			return "<unknown>@%s:%s" % self.addr
 		else:
 			return "%s@%s:%s" % ((self.username,) + self.addr)
+
+
+def active_users():
+	"""A hack to allow a "logged in" helper"""
+	global user_map
+	names = []
+	for user in user_map.values():
+		if hasattr(user,'username'):
+			names.append(user.username)
+	return names
 
 
 if __name__=='__main__':
