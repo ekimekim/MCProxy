@@ -2,7 +2,6 @@
 
 import struct
 import sys
-import nbt
 
 #TODO: Review which of these we actually need
 NODE_SERVER = 0x01
@@ -541,7 +540,6 @@ class PacketDecoder:
 			o = o[packet.direction]
 		if len(o) and not isinstance(o[0], tuple):
 			o = (o),
-		#print o
 		return o
 
 
@@ -562,8 +560,6 @@ class PacketDecoder:
 				if nbtdata is None:
 					o += self.pack('short', -1)
 				else:
-					nbtdata = nbt.encode(nbtdata)
-					nbtdata = nbt.gzip(nbtdata)
 					nbt_len = len(nbtdata)
 					o += self.pack('short', nbt_len)
 					o += nbtdata
@@ -571,9 +567,7 @@ class PacketDecoder:
 		if data_type == "metadata":
 			o = ''
 			for mtype, val in data:
-				#print "Packing", mtype, val
 				mtype2 = mtype >> 5
-				#print "mtype2 is", mtype2
 				o += self.pack('byte', mtype)
 				if mtype2 == 0: o += self.pack('byte', val) 
 				if mtype2 == 1: o += self.pack('short', val) 
@@ -626,9 +620,11 @@ class PacketDecoder:
 				if extra_len <= 0:
 					o["extra"] = None
 				else:
+					if len(self.buff) < extra_len:
+						raise IncompleteData()
 					extra_buff = self.buff[:extra_len]
 					self.buff = self.buff[extra_len:]
-					o["extra"] = nbt.decode(nbt.gunzip(self.buff))
+					o["extra"] = extra_buff
 			return o
 		if data_type == "metadata":
 			#[(17, 0), (0, 0), (16, -1)]
@@ -704,7 +700,7 @@ class PacketDecoder:
 		"""
 
 		#self.debug("READ BUFFER SIZE: %d" % len(self.buff))
-		backup = self.buff
+		backup = self.buff[:]
 		packet = Packet()
 		try:
 			packet.direction = self.node
@@ -763,7 +759,7 @@ class PacketDecoder:
 			if packet.ident == 0x82:
 				packet.data["text"] = []
 				for i in range(4):
-					packet.data["text"].append(packet.data.pop("line_%s" % (i+1)))
+					packet.data["text"].append(packet.data["line_%s" % (i+1)])
 					
 			#0x83
 			if packet.ident == 0x83:
@@ -779,7 +775,9 @@ class PacketDecoder:
 			self.buff = backup
 			return None
 		except Exception, ex:
+			self.buff = backup
 			ex.args += (self.buff[20:],)
+			raise
 
 
 	def encode_packet(self, packet):
@@ -829,7 +827,6 @@ class PacketDecoder:
 			if packet.ident == 0x82:
 				for i in range(4):
 					packet.data["line_%s" % (i+1)] = packet.data["text"][i]
-				del packet.data["text"]
 			#0x83
 			if packet.ident == 0x83:
 				packet.data['data_size'] = len(packet.data['data'])
@@ -839,26 +836,6 @@ class PacketDecoder:
 				output += self.pack(i[0], packet.data[i[1]])
 			
 			output += append
-			# Is this meant to be a multiline comment? Seriously?
-			"""
-			if hasattr(packet, "original") and output != packet.original:
-				f1 = open('err1.bin', 'w')
-				f1.write(packet.original)
-				f1.close()
-				f2 = open('err2.bin', 'w')
-				f2.write(output)
-				f2.close()
-				self.debug("Packet mis-match!")
-				self.debug("ID: %x" % packet.ident)
-				print packet.data
-				sys.exit(1)"""
-			"""if len(output) != len(packet.original):
-				print "%x\tXX %i\t%i" % (packet.ident, len(packet.original), len(output))
-				print "APPEND: %i" % len(append)
-				print packet.data
-			else:
-				print "OK"
-				print "%x\tOK %i\t%i" % (packet.ident, len(packet.original), len(output))"""
 			return output
 		except:
 			raise

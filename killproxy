@@ -1,3 +1,4 @@
 #!/bin/bash
 
-ps aux | grep 'python proxy\.py' | grep -v grep | awk '{print $2}' | xargs kill
+{ ps aux | grep 'python proxy\.py' | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null ; } &&
+	echo "Killed proxy"
