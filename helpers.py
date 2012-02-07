@@ -1,9 +1,9 @@
 # -*- coding: cp1252 -*-
 """Helper functions for plugins"""
 
-import os
-from proxy import send_packet
-from proxy import server_cmd as cmd
+import os, sys
+from packet_decoder import names as packet_names
+from packet_decoder import Packet, SERVER_TO_CLIENT
 from config import *
 
 def ops():
@@ -12,9 +12,16 @@ def ops():
 	ret = [unicode(name) for name in ret]
 	return ret
 
-def color(name):
-	"""Takes a color name and returns the string needed to turn the chat message that color."""
-	color_map = {
+def server_cmd(command):
+	"""Send a command to server console. May OSError."""
+	p = Popen([COMMAND_SCRIPT, command], stderr=PIPE)
+	ret = p.wait()
+	if ret:
+		out, err = p.communicate()
+		raise OSError(command, ret, err.read().strip())
+	return
+
+colors = {
 		'black': u'0',
 		'dark blue': u'1',
 		'dark green': u'2',
@@ -32,6 +39,48 @@ def color(name):
 		'yellow': u'e',
 		'white': u'f'
 	}
-	if name not in color_map:
+def color(name):
+	"""Takes a color name and returns the string needed to turn the chat message that color."""
+	if name not in colors:
 		raise ValueError('Bad color %s' % repr(name))
-	return u'§' + color_map[name]
+	return u'§' + colors[name]
+
+
+def all_users():
+	"""Returns list of users who ever played on the server"""
+	return [name[:-4] for name in os.listdir(os.path.join(WORLD_DIR, 'players'))]
+
+
+locks = set()
+def tell(user, message, delay=0, lock=None, prefix=''):
+	"""Send a server message to user.
+	Note: Splits multiline messages. See prefix, below.
+	Optional args:
+		delay: Wait delay seconds before sending message. Useful mainly with lock. See below.
+		lock: Until message sent (see delay) allow no new messages with the same user and lock value.
+			Generally speaking, expected to be a string. But it doesn't really matter.
+		prefix: Add given prefix to every line sent, eg '<server>: '.
+	Returns bool of whether message was sent (see lock)
+	"""
+	global locks
+	if lock is not None:
+		if (user, lock) in locks:
+			return False
+		else:
+			locks.add((user, lock))
+	message = unicode(message)
+	def tell_send():
+		reverse = dict([(y,x) for x,y in packet_names.items()])
+		for line in message.split('\n'):
+			packet = Packet()
+			packet.ident = reverse['Chat message']
+			packet.direction = SERVER_TO_CLIENT
+			packet.data = {'text': line}
+			send_packet(packet, user, False)
+		if lock is not None:
+			locks.remove((user, lock))
+
+	if delay:
+		schedule(tell_send, delay)
+	else:
+		tell_send()

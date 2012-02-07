@@ -35,6 +35,16 @@ class Packet:
 		from_to = {CLIENT_TO_SERVER: "to server", SERVER_TO_CLIENT: "from server"}[self.direction]
 		return "%s packet %s: %s" % (self.name(), from_to, repr(self.data))
 
+	def copy(self):
+		p = Packet()
+		p.direction = self.direction
+		p.ident = self.ident
+		p.process = self.process
+		p.transmit = self.transmit
+		p.data = self.data.copy()
+		return p
+
+
 SLOT_EXTRA_DATA_IDS = [
 	0x103, 0x105, 0x15A, 0x167,
 	0x10C, 0x10D, 0x10E, 0x10F, 0x122,
