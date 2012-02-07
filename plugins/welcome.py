@@ -16,7 +16,8 @@ Try "/color help".
 Old commands are semi-ported.
 /help should show what's available
 23/01/12: Issues with the server.
-Report any problems with /admin"""
+Report any problems with /admin
+"""
 
 
 HELP = """Commands and further help:
@@ -29,7 +30,8 @@ TODO /slimeballs: A gift - two slimeballs every real life day.
 The following standard minecraft commands also work:
 /tell PLAYER MESSAGE: Send a private MESSAGE to PLAYER.
 /kill: Suicide.
-More info available at http://49.156.19.217"""
+More info available at http://49.156.19.217
+"""
 
 FIRSTTIME = """Welcome to ekimekim's server!
 First and foremost, read /rules.
@@ -38,7 +40,8 @@ you have to get the resources first!
 While we employ anti-griefing technology,
 we are otherwise a vanilla gameplay server.
 Problems? Contact me via my email:
-mikelang3000@gmail.com"""
+mikelang3000@gmail.com
+"""
 
 RULES = """Most of this is obvious, really.
 1. All ops decisions supercede these rules.
@@ -51,7 +54,8 @@ RULES = """Most of this is obvious, really.
    the boundary. Overly large areas WILL
    fall under op scrutiny. Have a plan.
 5. Respects to OrionVM for free,
-   high-performance hosting for this server!"""
+   high-performance hosting for this server!
+"""
 
 INFO = """This server is currently undergoing changes.
 Soon, we hope to have the following layout:
@@ -62,7 +66,8 @@ optional extra content (eg. spawnable NPCs).
 Will carry over from the old creative map, currently down.
 A Role Playing server - This will be heavily modified.
 Talk to bitblitz about ideas for this new map!
-If you want more info on the technology we use, type '/tech'"""
+If you want more info on the technology we use, type '/tech'
+"""
 
 TECH = """Most modified minecraft servers use bukkit,
 or an equivilent modding framework. However, directly
@@ -74,7 +79,8 @@ The proxy sits between you and the server, watching
 packets that go between. It can also modify, drop or
 even generate packets, allowing for powerful control
 over what the client and the server sees.
-...you think the Server sent this message?"""
+...you think the Server sent this message?
+"""
 
 
 def on_start():
@@ -88,3 +94,4 @@ def on_start():
 def on_packet(packet, user, to_server):
 	if packet.name() == 'Login request' and to_server:
 		tell(user, WELCOME)
+	return packet
