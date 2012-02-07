@@ -1,7 +1,34 @@
 
-from gzip import GzipFile
-from StringIO import StringIO
+#from gzip import GzipFile
+#from StringIO import StringIO
 import struct
+
+from subprocess import Popen, PIPE
+from fcntl import fcntl, F_SETFL, F_GETFL
+from select import select
+from os import O_NONBLOCK, write
+
+def cmd(args, text):
+	proc = Popen(args, stdin=PIPE, stdout=PIPE)
+	output = ''
+	set_non_blocking = lambda fd: fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+	set_non_blocking(proc.stdin)
+	set_non_blocking(proc.stdout)
+	while proc.poll() is None:
+		r,w,x = select([proc.stdout], [proc.stdin] if text else [], [], 0.1)
+		if r:
+			output += proc.stdout.read()
+		if w:
+			n = write(proc.stdin.fileno(), text)
+			text = text[n:]
+			if not text:
+				proc.stdin.close()
+	if proc.returncode:
+		raise OSError(args, proc.returncode)
+	r,w,x = select([proc.stdout], [], [], 0.1)
+	if r:
+		output += proc.stdout.read()
+	return output
 
 class BadNBTData(Exception):
 	pass
@@ -28,16 +55,18 @@ def read(f, n):
 
 def gunzip(s):
 	"""Unzips a string compressed with gzip compression (level 9)"""
-	return GzipFile(fileobj=StringIO(s), mode='r').read()
+	#return GzipFile(fileobj=StringIO(s), mode='r').read()
+	return cmd(['gunzip'], s)
 
 def gzip(s):
 	"""Zips a string with gzip compression (level 9)"""
-	sio = StringIO()
-	gz = GzipFile(fileobj=sio, mode='w')
-	gz.write(s)
-	gz.close()
-	sio.seek(0)
-	return sio.read()
+#	sio = StringIO()
+#	gz = GzipFile(fileobj=sio, mode='w')
+#	gz.write(s)
+#	gz.close()
+#	sio.seek(0)
+#	return sio.read()
+	return cmd(['gzip'], s)
 
 
 class NBTCompound(dict):
