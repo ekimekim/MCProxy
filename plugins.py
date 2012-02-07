@@ -6,4 +6,4 @@ sys.path.append(PLUGIN_PATH)
 import log_all, log_sorted, usernames, no_changes, sp_opcolor
 
 # Set ordering here
-plugins = [log_all, log_sorted, usernames, sp_opcolor]
+plugins = [log_sorted, usernames, sp_opcolor]
