@@ -26,7 +26,7 @@ def on_packet(packet, user, to_server):
 	if not to_server or packet.name() != 'Chat message':
 		return packet
 
-	message = packet.data['text']
+	message = str(packet.data['text']) # de-unicode
 
 	for regex, func in registrations:
 		match = regex.match(message)
@@ -41,7 +41,7 @@ def on_packet(packet, user, to_server):
 
 def register(regex, func):
 	"""Register a callback function to be called when a chat message matches regex.
-	regex should be a valid regular expression that matches against the whole chat message.
+	regex should be a valid regular expression that matches against the whole chat message (no unicode).
 	func should take args (message, user, *regex_groups) and return False
 		to pass packet along or True (or None) to drop it.
 		regex_groups are the groups returned by a regex match (as per re.match(regex).groups)

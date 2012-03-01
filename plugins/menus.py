@@ -19,12 +19,18 @@ Finally, an extra functionality offered is a prompt menu,
 
 DEFAULT_TIMEOUT = 60
 
-import player_cmds as cmds
+import player_cmd as cmds
 import timed_events
 from helpers import tell
 
 
-MENU_HELP = """TODO
+MENU_HELP = """A menu will present you with several options.
+Type ":1" to choose the first,
+":2" to choose the second, etc.
+Type ":exit" to quit the current menu.
+Type ":again" and the menu will display again.
+Some menus do not have numbered options,
+for these, type ":your response here".
 """
 
 
@@ -49,7 +55,7 @@ def display(user, menu_text, options, exit_callback, timeout=None):
 	"""Display given menu to player. Menu format is as follows:
 		menu_text: The main "body" text of the menu
 		options: A list of tuples ("option text", option_callback). option_callback is called if the option is picked.
-			Alternately, setting options=('prompt', callback) asks the user for a string instead. Note the string 'exit' is impossible.
+			Alternately, setting options=('prompt', callback) asks the user for a string instead. Note the strings 'exit' and 'again' are impossible.
 		exit_callback: Called if the player tries to exit the menu.
 		timeout: Optional. Either a timeout in (float,int) seconds, or a tuple (timeout, callback),
 			where the callback is called after timeout. Else the exit_callback is called.
@@ -67,7 +73,7 @@ def display(user, menu_text, options, exit_callback, timeout=None):
 	"""
 
 	if hasattr(user, 'menu') and user.menu is not None:
-		raise menus.MenuLockError(user, user.menu)
+		raise MenuLockError(user, user.menu)
 
 	if timeout is None:
 		timeout = DEFAULT_TIMEOUT
@@ -75,6 +81,13 @@ def display(user, menu_text, options, exit_callback, timeout=None):
 		timeout = (timeout, exit_callback)
 
 	user.menu = (menu_text, options, exit_callback, timeout)
+	tell_menu(user, user.menu)
+	timed_events.register(timeout[0], lambda: on_timeout(user), key=('menu', user))
+
+
+def tell_menu(user, menu):
+	menu_text, options, exit_callback, timeout = menu
+
 	tell(user, menu_text)
 	n = 0
 	if len(options) and options[0] == 'prompt':
@@ -85,8 +98,6 @@ def display(user, menu_text, options, exit_callback, timeout=None):
 			tell(user, ":%d  %s" % (n, option))
 	tell(user, "")
 
-	timed_events.register(timeout[0], lambda: on_timeout(user), key=('menu', user))
-
 
 def on_cmd(full_message, user, value):
 	if (not hasattr(user, 'menu')) or user.menu is None:
@@ -94,7 +105,10 @@ def on_cmd(full_message, user, value):
 	
 	menu_text, options, exit_callback, timeout = user.menu
 
-	if value == 'exit':
+	if value == 'again':
+		tell_menu(user, user.menu)
+		return True
+	elif value == 'exit':
 		callback = exit_callback
 	elif len(options) and options[0] == 'prompt':
 		callback = options[1]
@@ -107,7 +121,7 @@ def on_cmd(full_message, user, value):
 		if not 0 < n <= len(options):
 			tell(user, "%d not a valid option" % n)
 			return True
-		callback = options[n][1]
+		callback = options[n-1][1]
 
 	new_menu = callback(user, value)
 	user.menu = None

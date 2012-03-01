@@ -1,4 +1,4 @@
-from socket import socket
+from socket import socket, SOL_SOCKET, SO_REUSEADDR
 from socket import error as socket_error
 from select import select
 from select import error as select_error
@@ -29,6 +29,7 @@ def main():
 
 	global listener
 	listener = socket()
+	listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 	listener.bind(LISTEN_ADDR)
 	listener.listen(128)
 	listener.setblocking(0)
@@ -177,7 +178,7 @@ def main():
 					logging.debug("Buffer after decode: length %d", len(buf))
 					read_buffers[fd] = buf
 
-	except Exception:
+	except (Exception, KeyboardInterrupt):
 		logging.critical("Unhandled exception", exc_info=1)
 		listener.close()
 		sys.exit(1)
