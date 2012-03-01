@@ -43,7 +43,7 @@ def register(regex, func):
 	"""Register a callback function to be called when a chat message matches regex.
 	regex should be a valid regular expression that matches against the whole chat message.
 	func should take args (message, user, *regex_groups) and return False
-		to pass packet along or True to drop it.
+		to pass packet along or True (or None) to drop it.
 		regex_groups are the groups returned by a regex match (as per re.match(regex).groups)
 	Example:
 		def private_msg(message, user, target, priv_msg):
