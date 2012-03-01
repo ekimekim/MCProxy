@@ -11,12 +11,12 @@ from helpers import tell
 
 WELCOME = """First time? Type /firsttime and /help
 ANNOUNCEMENTS:
+01/03/12: Sorry for the lack of work.
+Menu system implemented! Try /menu-test
 07/02/12: New commands coming in.
 Try "/color help".
 Old commands are semi-ported.
 /help should show what's available
-23/01/12: Issues with the server.
-Report any problems with /admin
 """
 
 
