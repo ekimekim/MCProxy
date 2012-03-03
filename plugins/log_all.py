@@ -8,6 +8,6 @@ def on_start():
 
 def on_packet(packet, user, to_server):
 	global f
-	f.write('\t'.join([str(time.time()), "user->server" if to_server else "server->user", str(user), repr(packet.original), str(packet)]) + '\n')
+	f.write('\t'.join([str(time.time()), "user->server" if to_server else "server->user", str(user), repr(packet.original) if hasattr(packet, 'original') else 'FABRICATED', str(packet)]) + '\n')
 	f.flush()
 	return packet

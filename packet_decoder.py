@@ -105,6 +105,7 @@ names = {
 	0x20:	"Entity look",
 	0x21:	"Entity look and relative move",
 	0x22:	"Entity teleport",
+	0x23:	"Entity head look",
 	0x26:	"Entity status",
 	0x27:	"Attach entity",
 	0x28:	"Entity metadata",
@@ -131,6 +132,7 @@ names = {
 	0x6C:	"Enchant Item",
 	0x82:	"Update sign",
 	0x83:	"Map data",
+	0x84:	"Update tile entity",
 	0xC8:	"Increment statistic",
 	0xC9:	"Player List Item",
 	0xFA:	"Plugin message",
@@ -146,20 +148,18 @@ structs = {
 		CLIENT_TO_SERVER: (
 			("int", "protocol_version"),
 			("string16", "username"),
-			("long", "map_seed"),
 			("string16", "level type"),
 			("int", "server_mode"),
-			("byte", "dimension"),
+			("int", "dimension"),
 			("byte", "difficulty"),
 			("ubyte", "world_height"),
 			("ubyte", "max_players")),
 		SERVER_TO_CLIENT: (
 			("int", "entity_id"),
 			("string16", "unknown"),
-			("long", "map_seed"),
 			("string16", "level type"),
 			("int", "server_mode"),
-			("byte", "dimension"),
+			("int", "dimension"),
 			("byte", "difficulty"),
 			("ubyte", "world_height"),
 			("ubyte", "max_players"))},
@@ -194,7 +194,7 @@ structs = {
 		("float", "food_saturation")),
 	#Respawn
 	0x09: (
-		("byte", "dimension"),
+		("int", "dimension"),
 		("byte", "difficulty"),
 		("byte", "server_mode"),
 		("short", "world_height"),
@@ -306,6 +306,7 @@ structs = {
 		("int", "z"),
 		("byte", "yaw"),
 		("byte", "pitch"),
+		("byte", "head yaw"),
 		("metadata", "metadata")),
 	#Entity: painting
 	0x19: (
@@ -367,6 +368,10 @@ structs = {
 		("int", "z"),
 		("byte", "yaw"),
 		("byte", "pitch")),
+	# Entity head look
+	0x23: (
+		("int", "entity_id"),
+		("byte", "head yaw")),
 	#Entity status
 	0x26: (
 		("int", "entity_id"),
@@ -402,17 +407,18 @@ structs = {
 	#Map chunk
 	0x33: (
 		("int", "x"),
-		("short", "y"),
 		("int", "z"),
-		("byte", "x_size"),
-		("byte", "y_size"),
-		("byte", "z_size"),
-		("int", "data_size")),
+		("bool", "contiguous"),
+		("short", "bitmap"),
+		("short", "add_bitmap"),
+		("int", "data_size"),
+		("int", "unknown")),
 	#Multi-block change
 	0x34: (
 		("int", "x_chunk"),
 		("int", "z_chunk"),
-		("short", "data_size")),
+		("short", "record_count"),
+		("int", "data_size")),
 	#Block change
 	0x35: (
 		("int", "x"),
@@ -509,6 +515,15 @@ structs = {
 		("short", "unknown1"),
 		("short", "map_id"),
 		("ubyte", "data_size")),
+	#Update Tile Entity
+	0x84: (
+		("int", "x"),
+		("short", "y"),
+		("int", "z"),
+		("byte", "action"),
+		("int", "custom1"),
+		("int", "custom2"),
+		("int", "custom3")),
 	#Increment statistic
 	0xC8: (
 		("int", "statistic_id"),

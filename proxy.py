@@ -36,8 +36,10 @@ def main():
 
 #	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
 	log_fd = open(LOG_FILE, 'a', 0) if not DEBUG else sys.stderr
-	logging.init(lambda level, msg: (level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
+	logging.init(lambda level, msg: (True or level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
 	logging.info("Starting up")
+	if PASSTHROUGH:
+		passthrough_log = open(PASSTHROUGH_LOG_FILE, 'w')
 
 	import helpers # Hax before import does important hax
 	helpers.active_users = active_users
@@ -144,29 +146,40 @@ def main():
 
 				# Decode as many packets as we can
 				while 1:
-					try:
-						packet, buf = unpack(buf, to_server)
-					except: # Undefined exception inherited from packet_decoder
-						logging.exception("Bad packet %s %s:\n%s", "from" if to_server else "to", user, hexdump(buf))
-						logging.warning("Dropping connection for %s due to bad packet from %s", user, "user" if to_server else "server")
-						dead += [fd, conn_map[fd]]
-						drop_connection(user)
-						break
-					if packet is None:
-						# Couldn't decode, need more read first - we're done here.
-						break
 
-					# logging.debug("%s server for %s: %s", "to" if to_server else "from", user, packet)
+					if PASSTHROUGH:
+						if not buf:
+							break
+						out_bytestr = buf
+						logging.info("Passing through %s", repr(buf))
+						passthrough_log.write(buf)
+						passthrough_log.flush()
+						buf = ''
+					else:
 
-					packets = handle_packet(packet, user, to_server)
-					packed = []
-					for packet in packets:
 						try:
-							packed.append(pack(packet, to_server))
+							packet, buf = unpack(buf, to_server)
 						except: # Undefined exception inherited from packet_decoder
-							logging.warning("Bad packet object while packing packet %s %s: %s", "from" if to_server else "to", user, packet, exc_info=1)
+							logging.exception("Bad packet %s %s:\n%s", "from" if to_server else "to", user, hexdump(buf))
+							logging.warning("Dropping connection for %s due to bad packet from %s", user, "user" if to_server else "server")
+							dead += [fd, conn_map[fd]]
+							drop_connection(user)
+							break
+						if packet is None:
+							# Couldn't decode, need more read first - we're done here.
+							break
 
-					out_bytestr = ''.join(packed)
+						# logging.debug("%s server for %s: %s", "to" if to_server else "from", user, packet)
+
+						packets = handle_packet(packet, user, to_server)
+						packed = []
+						for packet in packets:
+							try:
+								packed.append(pack(packet, to_server))
+							except: # Undefined exception inherited from packet_decoder
+								logging.warning("Bad packet object while packing packet %s %s: %s", "from" if to_server else "to", user, packet, exc_info=1)
+
+						out_bytestr = ''.join(packed)
 
 					# Append resulting bytestr to write buffer, to be sent later.
 					send_fd = conn_map[fd]

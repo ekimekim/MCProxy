@@ -9,6 +9,7 @@ import menu_test
 
 # Set ordering here
 plugins = []
+plugins.append(log_all)
 plugins.append(log_sorted) # Always first to catch all raw packets
 plugins.append(usernames) # The earlier the better, name the login packets sooner.
 plugins.append(timed_events) # Before anything that depends on it. Not working yet.
