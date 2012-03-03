@@ -4,5 +4,6 @@ def on_start():
 
 def on_packet(packet, user, to_server):
 	if to_server and packet.name() == 'Handshake':
-		user.username = packet.data['username']
+		parts = packet.data['username'].split(';')
+		user.username = ';'.join(parts[:-1])
 	return packet

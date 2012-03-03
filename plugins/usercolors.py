@@ -25,6 +25,7 @@ users = {}
 def on_start():
 	cmd.register('/color (.*)', on_command)
 	cmd.register('/color ?', no_command)
+#	cmd.register('/debug', lambda message, user: tell(user, str(active_users())))
 
 def on_packet(packet, user_obj, to_server):
 	if packet.name() == 'Chat message' and not to_server:
