@@ -736,25 +736,25 @@ class PacketDecoder:
 					packet.data['z2'] = self.unpack('short')
 		
 			#0x33
-			if packet.ident == 0x33:
+			if packet.ident in (0x33, 0x34):
 				packet.data['data'] = self.unpack_array_fast('byte', packet.data['data_size'])
 				del packet.data["data_size"]
 		
-			#0x34
-			if packet.ident == 0x34:
-				coords   = self.unpack_array_fast('short', packet.data['data_size'])
-				btype	= self.unpack_array_fast('byte',  packet.data['data_size'])
-				metadata = self.unpack_array_fast('byte',  packet.data['data_size'])
-				packet.data["blocks"] = []
-				for i in zip(coords, btype, metadata):
-					block = {}
-					block["x"] =		i[0] >> 12
-					block["z"] = 0x0F & i[0] >> 8
-					block["y"] = 0xFF & i[0]
-					block["type"] = i[1]
-					block["metadata"] = i[2]
-					packet.data["blocks"].append(block)
-				del packet.data["data_size"]
+#			#0x34
+#			if packet.ident == 0x34:
+#				coords = self.unpack_array_fast('short', packet.data['data_size'])
+#				btype = self.unpack_array_fast('byte',  packet.data['data_size'])
+#				metadata = self.unpack_array_fast('byte',  packet.data['data_size'])
+#				packet.data["blocks"] = []
+#				for i in zip(coords, btype, metadata):
+#					block = {}
+#					block["x"] =		i[0] >> 12
+#					block["z"] = 0x0F & i[0] >> 8
+#					block["y"] = 0xFF & i[0]
+#					block["type"] = i[1]
+#					block["metadata"] = i[2]
+#					packet.data["blocks"].append(block)
+#				del packet.data["data_size"]
 		
 			#0x3C
 			if packet.ident == 0x3C:
