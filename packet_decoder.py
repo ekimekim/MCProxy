@@ -807,24 +807,24 @@ class PacketDecoder:
 					for i in ('x2','y2','z2'):
 						append += self.pack('short', packet.data[i])
 			#0x33
-			if packet.ident == 0x33:
+			if packet.ident in (0x33, 0x34):
 				packet.data['data_size'] = len(packet.data['data'])
 				append += self.pack_array_fast('byte', packet.data['data'])
 			
-			#0x34
-			if packet.ident == 0x34:
-				coords = []
-				btypes = []
-				metadata = []
-				for i in packet.data['blocks']:
-					coords.append(i['x'] << 12 | i['z'] << 8 | i['y'])
-					btypes.append(i['type'])
-					metadata.append(i['metadata'])
-				
-				packet.data['data_size'] = len(coords)
-				append += self.pack_array_fast('short', coords)
-				append += self.pack_array_fast('byte', btypes)
-				append += self.pack_array_fast('byte', metadata)
+#			#0x34
+#			if packet.ident == 0x34:
+#				coords = []
+#				btypes = []
+#				metadata = []
+#				for i in packet.data['blocks']:
+#					coords.append(i['x'] << 12 | i['z'] << 8 | i['y'])
+#					btypes.append(i['type'])
+#					metadata.append(i['metadata'])
+#				
+#				packet.data['data_size'] = len(coords)
+#				append += self.pack_array_fast('short', coords)
+#				append += self.pack_array_fast('byte', btypes)
+#				append += self.pack_array_fast('byte', metadata)
 			
 			#0x3C
 			if packet.ident == 0x3C:
