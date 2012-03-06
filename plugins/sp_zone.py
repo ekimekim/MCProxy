@@ -15,12 +15,14 @@ new_zone_hooks = [] # Append to this list to register a function to call for new
 #		Consider revising - propose and accept system?
 
 def new_zone(name, bounds_info, creator):
+	global zones
 	zone = {}
 	zone['name'] = name
 	zone['creator'] = creator
 	zone['bounds_info'] = bounds_info
 	for fn in new_zone_hooks:
 		fn(zone)
+	zones.append(zone)
 	return zone
 
 
@@ -59,7 +61,7 @@ def get_bounds_fn(style, *args):
 
 def on_start():
 	global zones
-	zones = Store('zones') # This also loads up any old zones
+	zones = Store('zones', []) # This also loads up any old zones
 
 
 def on_packet(packet, user, to_server):
