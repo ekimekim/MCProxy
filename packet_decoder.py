@@ -198,7 +198,6 @@ structs = {
 		("byte", "difficulty"),
 		("byte", "server_mode"),
 		("short", "world_height"),
-		("long", "map_seed"),
 		("string16", "level_type")),
 	#Player
 	0x0A: ("bool", "on_ground"),
