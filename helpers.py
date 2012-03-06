@@ -1,7 +1,7 @@
 # -*- coding: cp1252 -*-
 """Helper functions for plugins"""
 
-import os, sys
+import os, sys, math
 from packet_decoder import names as packet_names
 from packet_decoder import Packet, SERVER_TO_CLIENT
 from config import *
@@ -20,6 +20,12 @@ def server_cmd(command):
 		out, err = p.communicate()
 		raise OSError(command, ret, err.read().strip())
 	return
+
+def point_dist(p, q):
+	"""Gets distance between points a and b. They should both be tuples of the same length."""
+	if len(p) != len(q):
+		raise ValueError("Lengths don't match", p, q)
+	return math.sqrt(sum((a-b)**2 for a,b in zip(p,q)))
 
 colors = {
 		'black': u'0',
