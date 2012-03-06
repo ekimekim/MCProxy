@@ -52,7 +52,8 @@ def main():
 	for plugin in plugins[:]: # Note that x[:] is a copy of x
 		try:
 			logging.debug("Loading plugin: %s", plugin)
-			plugin.on_start()
+			if hasattr(plugin, 'on_start'):
+				plugin.on_start()
 		except:
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
@@ -64,6 +65,9 @@ def main():
 		sys.stderr = log_fd
 
 	logging.debug("Started up")
+
+	signal(signal.SIGALRM, handle_tick)
+	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
 
 	try:
 		while 1:
@@ -263,7 +267,7 @@ def handle_packet(packet, user, to_server):
 	ispacket = lambda x: type(x) == InstanceType and isinstance(x, Packet)
 
 	packets = [packet]
-	for plugin in plugins:
+	for plugin in filter(lambda p: hasattr(p, 'on_packet'), plugins):
 		old_packets = packets
 		packets = []
 		for packet in old_packets:
