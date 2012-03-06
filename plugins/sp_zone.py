@@ -23,6 +23,7 @@ def new_zone(name, bounds_info, creator):
 		fn(zone)
 	return zone
 
+
 # --- bounds code ---
 
 def bounds_cube(dim, a, b):
@@ -47,7 +48,6 @@ def bounds_union(*bounds_infos):
 	def union_test(current_dim, point):
 		return any(get_bounds_fn(*bounds_info)(current_dim, point) for bounds_info in bounds_infos)
 
-
 bounds_styles = {'cube': bounds_cube, 'cylinder': bounds_cyl}
 
 def get_bounds_fn(style, *args):
@@ -56,33 +56,22 @@ def get_bounds_fn(style, *args):
 
 # --- End bounds code ---
 
+
 def on_start():
-	global zones = Store('zones') # This also loads up any old zones
+	global zones
+	zones = Store('zones') # This also loads up any old zones
 
 
 def on_packet(packet, user, to_server):
 	global zones
 
 	#if dim change
-	if packet.name() == "Login request" and not to_server:
-		user.dimension = packet.data["dimension"]
-	if packet.name() == "Respawn":
+	if not to_server and packet.name() in ("Login request", "Respawn"):
 		user.dimension = packet.data["dimension"]
 		
 	#if movement
-	if packet.name() == 'Player position' or packet.name() == 'Player position & look':
-		#clear zones
-		user.aZones = []
-		v3Pos = Vec3(packet.data['x'], packet.data['y'], packet.data['z'])
-		#check which zones players are in
-		for zone in aZones:
-			if zone.PointInZone(v3Pos):
-				#add zone
-				user.aZones.append(zone)
-		#print all zones to console
-	   # print user.Zones
-		#for zone in user.aZones:
-			#print zone.szName
-   
-	return packet
+	if packet.name() in ('Player position', 'Player position & look', 'Spawn Position'):
+		pos = (packet.data['x'], packet.data['y'], packet.data['z'])
+		user.zones = [get_bounds_fn(*zone['bounds_info'])(user.dimension, pos) for zone in zones]
 
+	return packet
