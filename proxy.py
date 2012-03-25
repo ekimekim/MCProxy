@@ -4,8 +4,7 @@ from select import select
 from select import error as select_error
 from subprocess import PIPE, Popen
 import sys, os, time, traceback, errno
-import simple_logging as logging
-from types import InstanceType
+import logging
 
 import usrtrace
 
@@ -34,9 +33,13 @@ def main():
 	listener.listen(128)
 	listener.setblocking(0)
 
-#	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
-	log_fd = open(LOG_FILE, 'a', 0) if not DEBUG else sys.stderr
-	logging.init(lambda level, msg: (True or level != 'debug') and (log_fd.write("[%f]\t%s\t%s\n" % (time.time(), level, msg))))
+	logging.basicConfig(filename=LOG_FILE, level=(logging.DEBUG if DEBUG else logging.INFO), format=LOG_FORMAT)
+	if DEBUG:
+		debug_handler = logging.StreamHandler() # defaults to stderr
+		debug_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+		debug_handler.setLevel(logging.DEBUG)
+		logging.root.addHandler(debug_handler)
+
 	logging.info("Starting up")
 	if PASSTHROUGH:
 		passthrough_log = open(PASSTHROUGH_LOG_FILE, 'w')
@@ -61,8 +64,8 @@ def main():
 	if not DEBUG:
 		print 'proxy: Daemonising...'
 		daemonise()
-		sys.stdout = log_fd
-		sys.stderr = log_fd
+		sys.stdout.close()
+		sys.stderr.close()
 
 	logging.debug("Started up")
 
@@ -75,7 +78,8 @@ def main():
 			try:
 				r, w, x = select(conn_map.keys() + [listener], send_buffers.keys(), [])
 			except select_error, ex:
-				if ex.errno == errno.EINTR:
+				ex_errno, ex_msg = ex.args
+				if ex_errno == errno.EINTR:
 					continue
 				raise
 
@@ -96,7 +100,10 @@ def main():
 					elif ex.errno in (errno.ECONNRESET, errno.EPIPE, errno.ENETDOWN, errno.ENETUNREACH, errno.ENOBUFS):
 						# These are all socket failure conditions, drop the connection
 						user = user_map[fd]
-						logging.warning("Dropping connection for %s due to send error to %s", user, "user" if fd in user_socks else "server", exc_info=1)
+						if ex.errno == errno.ECONNRESET and fd in usersocks: # User CONNRESET is ok, means user closed program or lost conn. Server CONNRESET is NOT.
+							logging.info("Connection from %s closed by connection reset", user)
+						else:
+							logging.warning("Dropping connection for %s due to send error to %s", user, "user" if fd in user_socks else "server", exc_info=1)
 						dead += [fd, conn_map[fd]]
 						drop_connection(user)
 						continue
@@ -135,7 +142,7 @@ def main():
 						drop_connection(user)
 						continue
 				if not read:
-					# Empty read means EOF - i think.
+					# Empty read means EOF
 					if to_server:
 						logging.info("Connection from %s closed", user)
 					else:
@@ -264,7 +271,7 @@ def handle_packet(packet, user, to_server):
 		to_server: True if packet is user->server, else False.
 		addr: The user packet is being sent from/to.
 	Return a list of packet objects to send to out stream (normally [the same packet])"""
-	ispacket = lambda x: type(x) == InstanceType and isinstance(x, Packet)
+	ispacket = lambda x: isinstance(x, Packet)
 
 	packets = [packet]
 	for plugin in filter(lambda p: hasattr(p, 'on_packet'), plugins):
@@ -317,12 +324,6 @@ def hexdump(s):
 		result += ''.join([c if c in PRINTING else '.' for c in slice])
 		result += '\n'
 	return result
-
-
-def log_traceback(sig, frame):
-	tb = traceback.format_stack()
-	tb = ''.join(tb)
-	logging.info("Recieved SIGUSR1, printing traceback:\n" + tb)
 
 
 class User(object):

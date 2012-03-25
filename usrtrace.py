@@ -1,7 +1,7 @@
 """On import, sets up SIGUSR1 to print a traceback as INFO for simple_logging"""
 
 import signal, traceback
-import simple_logging as logging
+import logging
 
 def log_traceback(sig, frame):
 	tb = traceback.format_stack()
