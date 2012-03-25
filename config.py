@@ -9,6 +9,7 @@ LISTEN_ADDR = ('0.0.0.0', 25565) if not DEBUG else ('0.0.0.0', 25564)
 SERVER_ADDR = ('127.0.0.1', 25565)
 #SERVER_ADDR = ('127.0.0.1', 25042)
 LOG_FILE = '/var/minecraft/logs/proxy.log' if not DEBUG else '/var/minecraft/logs/proxy-debug.log'
+LOG_FORMAT = '%(created)f\t%(levelname)s\t%(message)s'
 PASSTHROUGH_LOG_FILE = '/var/minecraft/logs/passthrough.log'
 PLUGIN_PATH = '/var/minecraft/Proxy2/plugins' if not DEBUG else './plugins'
 
