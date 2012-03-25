@@ -33,7 +33,13 @@ def main():
 	listener.listen(128)
 	listener.setblocking(0)
 
-	logging.basicConfig(filename=LOG_FILE, level=logging.DEBUG, format=LOG_FORMAT)
+	logging.basicConfig(filename=LOG_FILE, level=(logging.DEBUG if DEBUG else logging.INFO), format=LOG_FORMAT)
+	if DEBUG:
+		debug_handler = logging.StreamHandler() # defaults to stderr
+		debug_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+		debug_handler.setLevel(logging.DEBUG)
+		logging.root.addHandler(debug_handler)
+
 	logging.info("Starting up")
 	if PASSTHROUGH:
 		passthrough_log = open(PASSTHROUGH_LOG_FILE, 'w')
@@ -72,7 +78,8 @@ def main():
 			try:
 				r, w, x = select(conn_map.keys() + [listener], send_buffers.keys(), [])
 			except select_error, ex:
-				if ex.errno == errno.EINTR:
+				ex_errno, ex_msg = ex.args
+				if ex_errno == errno.EINTR:
 					continue
 				raise
 
