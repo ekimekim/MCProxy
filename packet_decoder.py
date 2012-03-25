@@ -133,6 +133,7 @@ names = {
 	0x82:	"Update sign",
 	0x83:	"Map data",
 	0x84:	"Update tile entity",
+	0xCA:	"Player Abilities",
 	0xC8:	"Increment statistic",
 	0xC9:	"Player List Item",
 	0xFA:	"Plugin message",
@@ -523,6 +524,12 @@ structs = {
 		("int", "custom1"),
 		("int", "custom2"),
 		("int", "custom3")),
+	# Player Abilities
+	0xCA: (
+		("bool", "invulnerable"),
+		("bool", "flying"),
+		("bool", "can_fly"),
+		("bool", "instant_destroy")),
 	#Increment statistic
 	0xC8: (
 		("int", "statistic_id"),
