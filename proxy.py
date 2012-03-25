@@ -66,8 +66,8 @@ def main():
 
 	logging.debug("Started up")
 
-	signal(signal.SIGALRM, handle_tick)
-	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
+#	signal(signal.SIGALRM, handle_tick)
+#	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
 
 	try:
 		while 1:
