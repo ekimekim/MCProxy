@@ -24,19 +24,16 @@ def tell(user, message, delay=0, lock=None, prefix=''):
 	Note: Apart from delay and lock args, this function acts like helpers.tell()
 	"""
 	message = unicode(message)
-	def tell_send():
-		helpers.tell(user, message, prefix=prefix)
-		if lock is not None:
-			locks.remove((user, lock))
+	tell_fn = lambda: helpers.tell(user, message, prefix=prefix)
 
 	if delay:
 		try:
 			schedule.check(lock)
 		except KeyError:
-			schedule.register(delay, tell_send, key=lock)
+			schedule.register(delay, tell_fn, key=lock)
 		else:
 			return False
 	else:
-		tell_send()
+		tell_fn()
 
 	return True

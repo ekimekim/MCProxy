@@ -3,7 +3,7 @@ from socket import error as socket_error
 from select import select
 from select import error as select_error
 from subprocess import PIPE, Popen
-import sys, os, time, traceback, errno
+import sys, os, time, traceback, errno, signal
 import logging
 
 import usrtrace
@@ -33,7 +33,7 @@ def main():
 	listener.listen(128)
 	listener.setblocking(0)
 
-	logging.basicConfig(filename=LOG_FILE, level=(logging.DEBUG if DEBUG else logging.INFO), format=LOG_FORMAT)
+	logging.basicConfig(filename=LOG_FILE, level=LOG_LEVEL, format=LOG_FORMAT)
 	if DEBUG:
 		debug_handler = logging.StreamHandler() # defaults to stderr
 		debug_handler.setFormatter(logging.Formatter(LOG_FORMAT))
@@ -69,8 +69,8 @@ def main():
 
 	logging.debug("Started up")
 
-	signal(signal.SIGALRM, handle_tick)
-	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
+	signal.signal(signal.SIGALRM, handle_tick)
+	signal.setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
 
 	try:
 		while 1:

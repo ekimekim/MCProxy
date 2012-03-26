@@ -21,10 +21,10 @@ def register(timeout, callback, key=None):
 	for i in range(len(events)):
 		event_time, event, event_key = events[i]
 		if event_time > new_time:
-			events.insert(i, (new_time, callback_fn, key))
+			events.insert(i, (new_time, callback, key))
 			break
 	else:
-		events.append((new_time, callback_fn, key))
+		events.append((new_time, callback, key))
 
 
 def check(key):
