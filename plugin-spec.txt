@@ -1,0 +1,32 @@
+Plugin files are python modules.
+
+Plugins SHOULD contain the following global variables:
+AUTHOR: String containing name or handle of plugin author, or list of the same.
+CONTACT: String containing contact details (preferably an email address) for author, or list of the same.
+DESCRIPTION: String containing description of plugin.
+
+Plugins MAY contain the following defined functions:
+	on_start():
+		Run on plugin initialisation. If an exception is raised here, plugin is disabled and a warning is given.
+	on_tick(users):
+		Run approximately every server tick (200ms). Users is a list of all currently connected User objects.
+		Important note: This call occurs on a signal and may interrupt any other execution at any point.
+		Any code using this function should prepare accordingly.
+	on_packet(packet, user, to_server):
+		This function is called for every packet passing through the proxy.
+		packet is a Packet and contains packet data.
+		user is a User and contains session data.
+		to_server is a bool and is True for client->server packets, False for server->client.
+		This function may return:
+			a Packet
+			a list of Packet
+		and each packet in the list will be passed along to the next plugin in the chain.
+		Note that returning [] has the effect of dropping the packet.
+		Note also that it is common to simply modify the given Packet before returning it.
+
+If a plugin wishes to log to the main logger, it MAY use the root logger available through the logging module.
+However, in general, the plugin SHOULD use its own logging path.
+
+Plugins MAY import any of the items contained in the top level directory.
+As an exception, plugins MAY NOT import proxy.py
+Plugins SHOULD make use of the functions given in helpers.py
