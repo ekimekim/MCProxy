@@ -1,0 +1,12 @@
+MCProxy is a python application that aims to:
+	Proxy minecraft packet connections between clients and servers
+	Packet inspection on that link
+	Implement features/restrictions on the minecraft game by modifying the packet stream
+
+The main proxy (in the top level directory) is the guts and provides a framework for making plugins.
+Plugins are in the plugins directory and are loaded in order. This order is set in the plugins.py file.
+
+All packets recieved are filtered through each plugin in order. Each plugin may replace it, modify it or just drop it completely.
+See the plugin spec for details.
+
+Within the plugins directory there are several core plugins that provide a framework for player interaction and other useful tasks.

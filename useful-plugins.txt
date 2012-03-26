@@ -1,0 +1,21 @@
+The following plugins are designed for use by other plugins.
+You may depend on their presence - please use them.
+
+usernames
+	Doesn't need to be imported directly.
+	This module ensures that the user's name is available under user.username
+
+schedule
+	Still in testing/development. Used for scheduling functions to occur at a later time.
+
+player_cmd
+	Register functions to be called when players type a given message. Runs on regex :D.
+
+menus
+	Menu interface system for any situation where you want players to read pages of text,
+	interactively pick an option, etc.
+	Highly flexible but somewhat overly so - see menu_test for good example usage.
+
+plugin_helpers
+	Still in development. This is the place for any helper functions that don't need a seperate plugin
+	but require other plugins to operate (and so cannot go in helpers.py to prevent cyclic dependencies).
