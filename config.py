@@ -12,7 +12,7 @@ LOG_FILE = '/var/minecraft/logs/proxy.log' if not DEBUG else '/var/minecraft/log
 LOG_FORMAT = '%(created)f\t%(levelname)s\t%(message)s'
 LOG_LEVEL = logging.INFO # if not DEBUG else logging.DEBUG
 PASSTHROUGH_LOG_FILE = '/var/minecraft/logs/passthrough.log'
-PLUGIN_PATH = '/var/minecraft/Proxy2/plugins' if not DEBUG else './plugins'
+PLUGIN_PATH = '/var/minecraft/mcproxy/plugins' if not DEBUG else './plugins'
 TICK_INTERVAL = 0.2
 
 # Buff sizes - shouldn't change
@@ -20,5 +20,5 @@ MAX_SEND = 4096
 MAX_RECV = 4096
 
 # Info for plugins
-SERVER_DIR = '/var/minecraft/'
+SERVER_DIR = '/var/minecraft/survival'
 WORLD_DIR = os.path.join(SERVER_DIR, 'world')
