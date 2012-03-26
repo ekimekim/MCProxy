@@ -12,7 +12,7 @@ LOG_FILE = '/var/minecraft/logs/proxy.log' if not DEBUG else '/var/minecraft/log
 LOG_FORMAT = '%(created)f\t%(levelname)s\t%(message)s'
 LOG_LEVEL = logging.INFO # if not DEBUG else logging.DEBUG
 PASSTHROUGH_LOG_FILE = '/var/minecraft/logs/passthrough.log'
-PLUGIN_PATH = '/var/minecraft/mcproxy/plugins' if not DEBUG else './plugins'
+PLUGIN_PATH = '/var/minecraft/src/mcproxy/plugins' if not DEBUG else './plugins'
 TICK_INTERVAL = 0.2
 
 # Buff sizes - shouldn't change
