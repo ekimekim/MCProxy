@@ -21,6 +21,7 @@ user_socks = set() # Collection of socks to users
 read_buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
+tick = 0 # Outstanding ticks to handle at next opportunity
 
 plugins = []
 
@@ -69,18 +70,26 @@ def main():
 
 	logging.debug("Started up")
 
-	signal.signal(signal.SIGALRM, handle_tick)
+	def add_tick(sig, frame):
+		global ticks
+		ticks += 1
+
+	signal.signal(signal.SIGALRM, add_tick)
 	signal.setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
 
 	try:
 		while 1:
+
+			while ticks:
+				handle_tick()
+				ticks -= 1
 
 			try:
 				r, w, x = select(conn_map.keys() + [listener], send_buffers.keys(), [])
 			except select_error, ex:
 				ex_errno, ex_msg = ex.args
 				if ex_errno == errno.EINTR:
-					continue
+					continue # This lets us handle any tick that may have been queued and retry
 				raise
 
 			dead = [] # Keeps track of fds in r, w that get dropped, so we know when not to bother.
@@ -253,8 +262,7 @@ def new_connection():
 
 
 def daemonise():
-	"""Detach from current session and run in background.
-	This is some unix black magic, best ignore it."""
+	"""Detach from current session and run in background."""
 	sys.stdin.close()
 	sys.stdout.close()
 	sys.stderr.close()
@@ -265,7 +273,7 @@ def daemonise():
 		sys.exit(0)
 
 
-def handle_tick(sig, frame):
+def handle_tick():
 	for plugin in plugins:
 		if hasattr(plugin, 'on_tick'):
 			try:
