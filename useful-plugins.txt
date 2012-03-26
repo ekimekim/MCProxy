@@ -5,7 +5,7 @@ usernames
 	Doesn't need to be imported directly.
 	This module ensures that the user's name is available under user.username
 
-timed_events
+schedule
 	Still in testing/development. Used for scheduling functions to occur at a later time.
 
 player_cmd
