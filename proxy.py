@@ -21,13 +21,13 @@ user_socks = set() # Collection of socks to users
 read_buffers = {} # Map from fd to a read buffer
 send_buffers = {} # Map from fd to a send buffer, if any.
 listener = None # the main bound listen socket
-tick = 0 # Outstanding ticks to handle at next opportunity
+ticks = 0 # Outstanding ticks to handle at next opportunity
 
 plugins = []
 
 def main():
 
-	global listener
+	global listener, ticks
 	listener = socket()
 	listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 	listener.bind(LISTEN_ADDR)
