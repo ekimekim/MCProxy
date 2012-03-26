@@ -268,7 +268,10 @@ def daemonise():
 def handle_tick(sig, frame):
 	for plugin in plugins:
 		if hasattr(plugin, 'on_tick'):
-			plugin.on_tick(set(user_map.values()))
+			try:
+				plugin.on_tick(set(user_map.values()))
+			except:
+				logging.exception("Error in plugin %s" % plugin)
 
 
 def handle_packet(packet, user, to_server):

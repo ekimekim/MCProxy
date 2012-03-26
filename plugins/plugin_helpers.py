@@ -8,10 +8,9 @@ Hence we have a helper plugin.
 """
 
 import helpers
-from schedule import schedule
+import schedule
 
 
-locks = set()
 def tell(user, message, delay=0, lock=None, prefix=''):
 	"""Send a server message to user.
 	Note: Splits multiline messages. See prefix, below.
@@ -24,12 +23,6 @@ def tell(user, message, delay=0, lock=None, prefix=''):
 
 	Note: Apart from delay and lock args, this function acts like helpers.tell()
 	"""
-	global locks
-	if lock is not None:
-		if (user, lock) in locks:
-			return False
-		else:
-			locks.add((user, lock))
 	message = unicode(message)
 	def tell_send():
 		helpers.tell(user, message, prefix=prefix)
@@ -37,6 +30,13 @@ def tell(user, message, delay=0, lock=None, prefix=''):
 			locks.remove((user, lock))
 
 	if delay:
-		schedule(tell_send, delay)
+		try:
+			schedule.check(lock)
+		except KeyError:
+			schedule.register(delay, tell_send, key=lock)
+		else:
+			return False
 	else:
 		tell_send()
+
+	return True

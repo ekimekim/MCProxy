@@ -20,7 +20,7 @@ Finally, an extra functionality offered is a prompt menu,
 DEFAULT_TIMEOUT = 60
 
 import player_cmd as cmds
-import timed_events
+import schedule
 from helpers import tell
 
 
@@ -82,7 +82,7 @@ def display(user, menu_text, options, exit_callback, timeout=None):
 
 	user.menu = (menu_text, options, exit_callback, timeout)
 	tell_menu(user, user.menu)
-	timed_events.register(timeout[0], lambda: on_timeout(user), key=('menu', user))
+	schedule.register(timeout[0], lambda: on_timeout(user), key=('menu', user))
 
 
 def tell_menu(user, menu):
@@ -125,7 +125,7 @@ def on_cmd(full_message, user, value):
 
 	new_menu = callback(user, value)
 	user.menu = None
-	timed_events.clear(('menu', user))
+	schedule.clear(('menu', user))
 	if new_menu is not None:
 		display(user, *new_menu)
 
