@@ -1,4 +1,4 @@
-"""On import, sets up SIGUSR1 to print a traceback as INFO for simple_logging"""
+"""On import, sets up SIGUSR1 to print a traceback as INFO for python logging"""
 
 import signal, traceback
 import logging

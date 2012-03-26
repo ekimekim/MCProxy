@@ -69,8 +69,8 @@ def main():
 
 	logging.debug("Started up")
 
-#	signal(signal.SIGALRM, handle_tick)
-#	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
+	signal(signal.SIGALRM, handle_tick)
+	setitimer(signal.ITIMER_REAL, TICK_INTERVAL, TICK_INTERVAL)
 
 	try:
 		while 1:
@@ -263,6 +263,12 @@ def daemonise():
 		sys.exit(0)
 	if os.fork():
 		sys.exit(0)
+
+
+def handle_tick(sig, frame):
+	for plugin in plugins:
+		if hasattr(plugin, 'on_tick'):
+			plugin.on_tick(set(user_map.values()))
 
 
 def handle_packet(packet, user, to_server):

@@ -2,7 +2,7 @@
 Note this is a lengthy operation and should be used sparingly."""
 
 import packet_decoder
-import simple_logging as logging
+import logging
 
 def on_start():
 	pass
