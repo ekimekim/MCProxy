@@ -10,8 +10,6 @@ Plugins MAY contain the following defined functions:
 		Run on plugin initialisation. If an exception is raised here, plugin is disabled and a warning is given.
 	on_tick(users):
 		Run approximately every server tick (200ms). Users is a list of all currently connected User objects.
-		Important note: This call occurs on a signal and may interrupt any other execution at any point.
-		Any code using this function should prepare accordingly.
 	on_packet(packet, user, to_server):
 		This function is called for every packet passing through the proxy.
 		packet is a Packet and contains packet data.
