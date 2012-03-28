@@ -28,16 +28,8 @@ However, in general, the plugin SHOULD use its own logging path.
 Plugins MAY import any of the items contained in the top level directory.
 As an exception, plugins MAY NOT import proxy.py
 Plugins SHOULD make use of the functions given in helpers.py
-Plugins SHOULD
 
-Plugins MUST not do stupid shit that fucks up the main program.
-This being python, there's no real way to prevent that apart from just not doing stupid shit.
-Some things that you may be tempted to do that aren't always stupid shit but still MUST not do:
-	signals
-	threads
-	importing proxy.py (here be dragons)
-	signals
-	sleep (use schedule instead)
-	signals
-	taking a long time (the entire proxy is blocking on you)
-	signals
+Plugins MUST NOT:
+	Modify the real-time process timer, or the SIGALRM handler
+	Take overly long to run (the entire proxy is blocking on you)
+In addition, the User and Packet objects should not be considered thread-safe.
