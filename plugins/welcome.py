@@ -11,12 +11,11 @@ from helpers import tell
 
 WELCOME = """First time? Type /firsttime and /help
 ANNOUNCEMENTS:
+27/03/12: The server will reset soon
+when plot protection goes in. Please
+email coords for areas you want ported.
 01/03/12: Sorry for the lack of work.
 Menu system implemented! Try /menu-test
-07/02/12: New commands coming in.
-Try "/color help".
-Old commands are semi-ported.
-/help should show what's available
 """
 
 
