@@ -12,7 +12,7 @@ If you require a stronger guarentee, you can call sync() to force a sync early.
 The top-level object itself must be either a list or a dict.
 """
 
-import simplejson, os
+import json, os
 
 from config import SERVER_DIR
 
@@ -42,7 +42,7 @@ class Store():
 
 def on_start():
 	global data
-	data = simplejson.load(open(JSON_FILE, 'rU'))
+	data = json.load(open(JSON_FILE, 'rU'))
 	if type(data) != dict:
 		raise ValueError("Bad data in json store")
 
@@ -51,11 +51,11 @@ def on_packet(packet, user, to_server):
 	return packet
 
 
-def on_tick():
+def on_tick(users):
 	sync()
 
 
 def sync():
 	global data
 	os.rename(JSON_FILE, JSON_FILE_BACKUP)
-	simplejson.dump(data, open(JSON_FILE, 'w'))
+	json.dump(data, open(JSON_FILE, 'w'))

@@ -55,13 +55,13 @@ def bounds_cube(dim, a, b):
 		return current_dim == dim and all(lower < coord < upper for coord, (lower, upper) in zip(point, ranges))
 	return cube_test
 
-def bounds_cyl(dim, base, radius, height)
+def bounds_cyl(dim, base, radius, height):
 	"""base is the point at the bottom middle of the cyl"""
 	base_x, base_y, base_z = base
-	def cyl_test(current_dim, point)
+	def cyl_test(current_dim, point):
 		x, y, z = point
-		return dim == current_dim and
-			min_height <= y <= max_height and
+		return dim == current_dim and \
+			base_y <= y <= base_y + height and \
 			point_dist((x,z), (base_x, base_z)) <= radius
 	return cyl_test
 
