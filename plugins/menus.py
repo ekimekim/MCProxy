@@ -102,7 +102,7 @@ def tell_menu(user, menu):
 def on_cmd(full_message, user, value):
 	if (not hasattr(user, 'menu')) or user.menu is None:
 		return False # Let cmd pass through
-	
+
 	menu_text, options, exit_callback, timeout = user.menu
 
 	if value == 'again':
@@ -134,7 +134,8 @@ def on_cmd(full_message, user, value):
 
 def on_timeout(user):
 	menu_text, options, exit_callback, timeout = user.menu
-	new_menu = callback(user, value)
+	timeout_interval, timeout_callback = timeout
+	new_menu = timeout_callback(user, value)
 	user.menu = None
 	if new_menu is not None:
 		display(user, *new_menu)
