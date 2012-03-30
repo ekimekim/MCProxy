@@ -14,8 +14,10 @@ The top-level object itself must be either a list or a dict.
 
 import simplejson, os
 
-JSON_FILE = 'persistent_data.json'
-JSON_FILE_BACKUP = '.persistent_data.json~'
+from config import SERVER_DIR
+
+JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.json')
+JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.json~')
 
 
 class Store():
