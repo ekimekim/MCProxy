@@ -133,8 +133,8 @@ def on_cmd(full_message, user, value):
 
 
 def on_timeout(user):
-	menu_text, options, exit_callback, timeout = user.menu
-	new_menu = callback(user, value)
+	menu_text, options, exit_callback, (interval, timeout_callback) = user.menu
+	new_menu = timeout_callback(user, value)
 	user.menu = None
 	if new_menu is not None:
 		display(user, *new_menu)
