@@ -20,10 +20,12 @@ def on_cmd(message, user):
 		tell(user, "Failure")
 
 def on_cmd2(message, user):
+	flag = False
 	for zone in user.zones:
-		tell(user, "In zone: %s%s" % (zone['name'],str(zone['acls']).replace('"','')))
-	if not user.zones:
-		tell(user, "In no zones")
+		flag = True
+		tell(user, "In zone: %s%s" % (zone['name'], zone['acls']))
+	if not flag:
+		tell(user, "In no zones.")
 
 
 def on_cmd3(message, user, zone, add_or_rm, username, rule):

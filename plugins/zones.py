@@ -33,6 +33,8 @@ new_zone_hooks = [] # Append to this list to register a function to call when a 
 def new_zone(name, bounds_info, creator):
 	"""Create a new zone and call hooks. On success, returns new zone. Else returns None."""
 	global zones
+	if name in zones:
+		return None
 	zone = {}
 	zone['name'] = name
 	zone['creator'] = creator
@@ -42,7 +44,7 @@ def new_zone(name, bounds_info, creator):
 		if ret is not None and not ret:
 			break
 	else:
-		zones.append(zone)
+		zones[name] = zone
 		return zone
 	return None
 
@@ -91,7 +93,7 @@ def get_zones():
 
 def on_start():
 	global zones
-	zones = Store('zones', []) # This also loads up any old zones
+	zones = Store('zones', {}) # This also loads up any old zones
 
 
 def on_packet(packet, user, to_server):
@@ -111,8 +113,12 @@ def on_packet(packet, user, to_server):
 	else:
 		return packet
 
+
 	if hasattr(user, 'zones'):
 		user.zones_old = user.zones
-	user.zones = (zone for zone in zones if get_bounds_fn(*zone['bounds_info'])(user.dimension, user.position)) # Note the lazy eval :D
+	if not hasattr(user, 'position') or not hasattr(user, 'dimension'):
+		user.zones = []
+	else:
+		user.zones = [zone for zone in zones.values() if get_bounds_fn(*zone['bounds_info'])(user.dimension, user.position)]
 
 	return packet

@@ -16,7 +16,8 @@ they need permissions in all zones.
 """
 
 import zones
-from packet_decoder import SERVER_TO_CLIENT
+from packet_decoder import SERVER_TO_CLIENT, Packet
+from helpers import send_packet
 
 # It is suggestd to use the symbolic names.
 ENTRY = 'ENTRY'
@@ -48,10 +49,18 @@ def on_packet(packet, user, to_server):
 		return packet
 
 	# ENTRY
-	if packet.name() in ('Player position', 'Player position & look', 'Spawn Position') and any(ENTRY not in get_acls(zone,user) for zone in user.zones):
+	if packet.name() in ('Player position', 'Player position & look') and any(ENTRY not in get_acls(zone,user) for zone in user.zones):
+		new_stance = packet.data['stance'] - packet.data['y'] + user.position_old[1]
 		packet.data['x'], packet.data['y'], packet.data['z'] = user.position_old
-		back_packet = packet.copy()
+		packet.data['stance'] = new_stance
+		back_packet = Packet()
+		back_packet.ident = 0x0B # Player position
 		back_packet.direction = SERVER_TO_CLIENT
+		back_packet.data['x'] = packet.data['x']
+		back_packet.data['y'] = packet.data['y']
+		back_packet.data['z'] = packet.data['z']
+		back_packet.data['stance'] = packet.data['stance']
+		back_packet.data['on_ground'] = packet.data['on_ground']
 		send_packet(back_packet, user, False)
 		return packet
 
