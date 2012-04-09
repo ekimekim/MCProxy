@@ -55,11 +55,14 @@ def on_packet(packet, user, to_server):
 			return packet
 
 	# INTERACT TODO
-	#elif packet.name() in (
+	#elif packet.name() in ():
 
 	# MODIFY (block digging)
 	elif packet.name() in ('Player digging') and packet.data['status'] == 0:
 		return []
 
 	# MODIFY (block placement) TODO
+	#elif packet.name() in ():
 
+	else:
+		return packet
