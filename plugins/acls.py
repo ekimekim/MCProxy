@@ -59,7 +59,7 @@ def on_packet(packet, user, to_server):
 	#if packet.name() in ():
 
 	# MODIFY (block digging)
-	if packet.name() in ('Player digging') and packet.data['status'] == 0 and any(MODIFY not in get_acls(zone,user) for zone in user.zones):
+	if packet.name() == 'Player digging' and packet.data['status'] == 0 and any(MODIFY not in get_acls(zone,user) for zone in user.zones):
 		return []
 
 	# MODIFY (block placement) TODO

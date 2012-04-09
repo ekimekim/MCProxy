@@ -843,7 +843,7 @@ class PacketDecoder:
 			
 			output += append
 			return output
-		except:
+		except Exception:
 			raise
 
 

@@ -7,7 +7,7 @@ from plugin_helpers import tell
 
 def on_start():
 	cmd.register('/test', on_cmd)
-	cmd.register('/test', on_cmd)
+	cmd.register('/test2', on_cmd2)
 	cmd.register(r'/testacl ([^ ]+) ((?:add)|(?:rm)) ([^ ]+) ([^ ]+)', on_cmd3)
 
 n = 0
@@ -21,7 +21,9 @@ def on_cmd(message, user):
 
 def on_cmd2(message, user):
 	for zone in user.zones:
-		tell(user, "In zone: %s%s" % (zone['name'],zone['acls']))
+		tell(user, "In zone: %s%s" % (zone['name'],str(zone['acls']).replace('"','')))
+	if not user.zones:
+		tell(user, "In no zones")
 
 
 def on_cmd3(message, user, zone, add_or_rm, username, rule):

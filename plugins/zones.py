@@ -99,17 +99,20 @@ def on_packet(packet, user, to_server):
 
 	#if dim change
 	if not to_server and packet.name() in ("Login request", "Respawn"):
-		user.dimension_old = user.dimension
+		if hasattr(user, 'dimension'):
+			user.dimension_old = user.dimension
 		user.dimension = packet.data["dimension"]
 	#if movement
 	elif packet.name() in ('Player position', 'Player position & look', 'Spawn Position'):
 		pos = (packet.data['x'], packet.data['y'], packet.data['z'])
-		user.position_old = user.position
+		if hasattr(user, 'position'):
+			user.position_old = user.position
 		user.position = pos
 	else:
 		return packet
 
-	user.zones_old = user.zones
+	if hasattr(user, 'zones'):
+		user.zones_old = user.zones
 	user.zones = (zone for zone in zones if get_bounds_fn(*zone['bounds_info'])(user.dimension, user.position)) # Note the lazy eval :D
 
 	return packet

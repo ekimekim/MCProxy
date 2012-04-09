@@ -58,7 +58,7 @@ def main():
 			logging.debug("Loading plugin: %s", plugin)
 			if hasattr(plugin, 'on_start'):
 				plugin.on_start()
-		except:
+		except Exception:
 			logging.exception("Error initialising plugin %s", plugin)
 			plugins.remove(plugin)
 
@@ -179,7 +179,7 @@ def main():
 
 						try:
 							packet, buf = unpack(buf, to_server)
-						except: # Undefined exception inherited from packet_decoder
+						except Exception: # Undefined exception inherited from packet_decoder
 							logging.exception("Bad packet %s %s:\n%s", "from" if to_server else "to", user, hexdump(buf))
 							logging.warning("Dropping connection for %s due to bad packet from %s", user, "user" if to_server else "server")
 							dead += [fd, conn_map[fd]]
@@ -196,7 +196,7 @@ def main():
 						for packet in packets:
 							try:
 								packed.append(pack(packet, to_server))
-							except: # Undefined exception inherited from packet_decoder
+							except Exception: # Undefined exception inherited from packet_decoder
 								logging.warning("Bad packet object while packing packet %s %s: %s", "from" if to_server else "to", user, packet, exc_info=1)
 
 						out_bytestr = ''.join(packed)
@@ -278,7 +278,7 @@ def handle_tick():
 		if hasattr(plugin, 'on_tick'):
 			try:
 				plugin.on_tick(set(user_map.values()))
-			except:
+			except Exception:
 				logging.exception("Error in plugin %s" % plugin)
 
 
@@ -304,7 +304,7 @@ def handle_packet(packet, user, to_server):
 					packets.append(ret)
 				else:
 					assert False, "Return value not packet or list: %s" % repr(ret)
-			except:
+			except Exception:
 				logging.exception("Error in plugin %s" % plugin)
 				packets.append(packet)
 	return packets
@@ -319,7 +319,7 @@ def send_packet(packet, user, to_server):
 	
 	try:
 		out_bytestr = ''.join([pack(packet, to_server) for packet in packets])
-	except: # Undefined exception inherited from packet_decoder
+	except Exception: # Undefined exception inherited from packet_decoder
 		logging.exception("Bad packet object while packing generated packet %s %s: %s", "from" if to_server else "to", user, packet)
 		raise # Will be caught as a failure of the plugin sending it.
 
