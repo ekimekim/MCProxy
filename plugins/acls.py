@@ -39,30 +39,30 @@ def on_start():
 	zones.new_zone_hooks.append(on_new_zone)
 
 
+def get_acls(zone, user):
+	return zone['acls'].get(user.username, zone['acls']['EVERYONE'])
+
+
 def on_packet(packet, user, to_server):
 	if not to_server:
 		return packet
 
 	# ENTRY
-	if packet.name() in ('Player position', 'Player position & look', 'Spawn Position'):
-		if any(ENTRY not in zone for zone in user.zones):
-			packet.data['x'], packet.data['y'], packet.data['z'] = user.position_old
-			back_packet = packet.copy()
-			back_packet.direction = SERVER_TO_CLIENT
-			send_packet(back_packet, user, False)
-			return packet
-		else:
-			return packet
+	if packet.name() in ('Player position', 'Player position & look', 'Spawn Position') and any(ENTRY not in get_acls(zone,user) for zone in user.zones):
+		packet.data['x'], packet.data['y'], packet.data['z'] = user.position_old
+		back_packet = packet.copy()
+		back_packet.direction = SERVER_TO_CLIENT
+		send_packet(back_packet, user, False)
+		return packet
 
 	# INTERACT TODO
-	#elif packet.name() in ():
+	#if packet.name() in ():
 
 	# MODIFY (block digging)
-	elif packet.name() in ('Player digging') and packet.data['status'] == 0:
+	if packet.name() in ('Player digging') and packet.data['status'] == 0 and any(MODIFY not in get_acls(zone,user) for zone in user.zones):
 		return []
 
 	# MODIFY (block placement) TODO
 	#elif packet.name() in ():
 
-	else:
-		return packet
+	return packet

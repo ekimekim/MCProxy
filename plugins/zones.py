@@ -47,6 +47,10 @@ def new_zone(name, bounds_info, creator):
 	return None
 
 
+def get_zones():
+	return zones
+
+
 # --- bounds code - these functions generate "is point within" functions ---
 
 def bounds_cube(dim, a, b):

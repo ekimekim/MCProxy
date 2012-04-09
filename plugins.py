@@ -3,7 +3,8 @@ from config import *
 sys.path.append(PLUGIN_PATH)
 
 # Import plugins here
-import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_cmd, welcome, menus, timed_events, schedule, plugin_helpers, zones, persistent_store
+import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_cmd, welcome, menus, schedule, plugin_helpers, zones, persistent_store
+import acls
 import player_cmd as cmd
 import menu_test, testing
 
@@ -26,6 +27,7 @@ plugins.append(menus) # Should probably be before anything that depends on it
 
 # features
 plugins.append(welcome) # Has /help, so high priority. But should be after usernames (for the welcome)
+plugins.append(acls)
 plugins.append(usercolors)
 plugins.append(menu_test)
 
