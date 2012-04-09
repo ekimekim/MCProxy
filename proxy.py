@@ -220,8 +220,8 @@ def main():
 def drop_connection(user):
 	user_fd = user.user_sock
 	srv_fd = user.srv_sock
-	user_fd.close()
-	srv_fd.close()
+	repeat_on_eintr(user_fd.close)
+	repeat_on_eintr(srv_fd.close)
 	del conn_map[user_fd]
 	del conn_map[srv_fd]
 	del user_map[user_fd]
@@ -237,19 +237,14 @@ def drop_connection(user):
 
 
 def new_connection():
-	try:
-		user_sock, addr = listener.accept()
-	except socket_error, ex:
-		if ex.errno == errno.EINTR: # Harmless - interrupted. Leave it be and it will be tried again next pass.
-			return
-		raise
+	user_sock, addr = repeat_on_eintr(listener.accept)
 	logging.info("New connection from address %s", str(addr))
 	# Setup objects
 	srv_sock = socket()
 	user = User(addr=addr, user_sock=user_sock, srv_sock=srv_sock)
-	srv_sock.connect(SERVER_ADDR)
-	user_sock.setblocking(0)
-	srv_sock.setblocking(0)
+	repeat_on_eintr(lambda: srv_sock.connect(SERVER_ADDR))
+	repeat_on_eintr(lambda: user_sock.setblocking(0))
+	repeat_on_eintr(lambda: srv_sock.setblocking(0))
 	# Add things to global data structures
 	user_map[user_sock] = user
 	user_map[srv_sock] = user
@@ -271,6 +266,15 @@ def daemonise():
 		sys.exit(0)
 	if os.fork():
 		sys.exit(0)
+
+
+def repeat_on_eintr(fn):
+	while 1:
+		try:
+			return fn()
+		except socket_error, ex:
+			if ex.errno != errno.EINTR:
+				raise
 
 
 def handle_tick():
