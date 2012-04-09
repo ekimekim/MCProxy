@@ -1,6 +1,8 @@
 from helpers import point_dist
 from persistent_store import Store
 
+# TODO documentation
+
 new_zone_hooks = [] # Append to this list to register a function to call when a new zone is made.
 # Function should take args (zone) and, by convention, should store any data it needs to in the Zone object itself,
 # ie. other plugins should not be maintaining auxillary data stores.
@@ -93,14 +95,17 @@ def on_packet(packet, user, to_server):
 
 	#if dim change
 	if not to_server and packet.name() in ("Login request", "Respawn"):
+		user.dimension_old = user.dimension
 		user.dimension = packet.data["dimension"]
 	#if movement
 	elif packet.name() in ('Player position', 'Player position & look', 'Spawn Position'):
 		pos = (packet.data['x'], packet.data['y'], packet.data['z'])
+		user.position_old = user.position
 		user.position = pos
 	else:
 		return packet
 
+	user.zones_old = user.zones
 	user.zones = (zone for zone in zones if get_bounds_fn(*zone['bounds_info'])(user.dimension, user.position)) # Note the lazy eval :D
 
 	return packet

@@ -14,8 +14,6 @@ class Packet:
 		self.direction = 0
 		self.ident = 0
 		self.data = {}
-		self.process = True
-		self.transmit = True
 
 	def name(self):
 		return names[self.ident]
@@ -28,8 +26,6 @@ class Packet:
 		p = Packet()
 		p.direction = self.direction
 		p.ident = self.ident
-		p.process = self.process
-		p.transmit = self.transmit
 		p.data = self.data.copy()
 		return p
 
