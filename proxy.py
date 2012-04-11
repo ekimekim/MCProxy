@@ -109,7 +109,7 @@ def main():
 					elif ex.errno in (errno.ECONNRESET, errno.EPIPE, errno.ENETDOWN, errno.ENETUNREACH, errno.ENOBUFS):
 						# These are all socket failure conditions, drop the connection
 						user = user_map[fd]
-						if ex.errno == errno.ECONNRESET and fd in usersocks: # User CONNRESET is ok, means user closed program or lost conn. Server CONNRESET is NOT.
+						if ex.errno == errno.ECONNRESET and fd in user_socks: # User CONNRESET is ok, means user closed program or lost conn. Server CONNRESET is NOT.
 							logging.info("Connection from %s closed by connection reset", user)
 						else:
 							logging.warning("Dropping connection for %s due to send error to %s", user, "user" if fd in user_socks else "server", exc_info=1)
