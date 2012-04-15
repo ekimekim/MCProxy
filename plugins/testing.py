@@ -6,15 +6,14 @@ from zones import new_zone_hooks, new_zone, get_zones
 from plugin_helpers import tell
 
 def on_start():
-	cmd.register('/test', on_cmd)
-	cmd.register('/test2', on_cmd2)
+	cmd.register('/testzone new ([^ ]+)', on_cmd)
+	cmd.register('/testzone view', on_cmd2)
 	cmd.register(r'/testacl ([^ ]+) ((?:add)|(?:rm)) ([^ ]+) ([^ ]+)', on_cmd3)
 
-n = 0
-def on_cmd(message, user):
-	global n
-	n += 1
-	if new_zone('test%d' % n, ('cylinder', user.dimension, user.position, 8, 16), user.username):
+def on_cmd(message, user, name):
+	offset = user.position
+	offset = [axis+5 for axis in offset]
+	if new_zone(name, ('cube', user.dimension, user.position, offset), user.username):
 		tell(user, "Success")
 	else:
 		tell(user, "Failure")
@@ -34,7 +33,7 @@ def on_cmd3(message, user, zone, add_or_rm, username, rule):
 	except KeyError:
 		tell(user, "No such zone")
 		return
-	user_acls = acls.get(username, acls['EVERYONE'])
+	user_acls = acls.setdefault(username, acls['EVERYONE'])
 	if add_or_rm == 'add':
 		if rule not in user_acls:
 			user_acls.append(rule)

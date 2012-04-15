@@ -18,6 +18,7 @@ def tell(user, message, delay=0, lock=None, prefix=''):
 		delay: Wait delay seconds before sending message. Useful mainly with lock. See below.
 		lock: Until message sent (see delay) allow no new messages with the same user and lock value.
 			Generally speaking, expected to be a string. But it doesn't really matter.
+			A common usage is a tuple ("namespace",user) for a per-user lock.
 		prefix: Add given prefix to every line sent, eg '<server>: '.
 	Returns bool of whether message was sent (see lock).
 

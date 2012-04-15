@@ -30,8 +30,9 @@ new_zone_hooks = [] # Append to this list to register a function to call when a 
 # Note the area the zone covers: In the overworld, a cube covering the 128x128 square about (0,0) (full height)
 #                                In the nether, a cylinder covering a 8-radus area about (0,0) (full height)
 
-def new_zone(name, bounds_info, creator):
-	"""Create a new zone and call hooks. On success, returns new zone. Else returns None."""
+def new_zone(name, bounds_info, creator, **kwargs):
+	"""Create a new zone and call hooks. Also add in any kwargs given.
+	On success, returns new zone. Else returns None."""
 	global zones
 	if name in zones:
 		return None
@@ -45,12 +46,9 @@ def new_zone(name, bounds_info, creator):
 			break
 	else:
 		zones[name] = zone
+		zones.update(kwargs)
 		return zone
 	return None
-
-
-def get_zones():
-	return zones
 
 
 # --- bounds code - these functions generate "is point within" functions ---
@@ -60,7 +58,7 @@ def bounds_cube(dim, a, b):
 	for axis in ranges:
 		axis = sorted(axis)
 	def cube_test(current_dim, point):
-		return current_dim == dim and all(lower < coord < upper for coord, (lower, upper) in zip(point, ranges))
+		return current_dim == dim and all(lower <= coord <= upper for coord, (lower, upper) in zip(point, ranges))
 	return cube_test
 
 def bounds_cyl(dim, base, radius, height):
@@ -119,6 +117,9 @@ def on_packet(packet, user, to_server):
 	if not hasattr(user, 'position') or not hasattr(user, 'dimension'):
 		user.zones = []
 	else:
-		user.zones = [zone for zone in zones.values() if get_bounds_fn(*zone['bounds_info'])(user.dimension, user.position)]
+		user.zones = get_zones_at_point(user.dimension, user.position)
 
 	return packet
+
+def get_zones_at_point(dim, pos):
+	return [zone for zone in zones.values() if get_bounds_fn(*zone['bounds_info'])(dim, pos)]
