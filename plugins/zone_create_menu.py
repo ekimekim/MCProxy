@@ -5,6 +5,7 @@ DESCRIPTION = """A menu for defining new zones then submitting them for op appro
 
 from menus import display, MenuLockError
 from player_cmd import register
+from helpers import ops
 
 
 def on_start():
@@ -86,11 +87,17 @@ def from_cube_pt2(user, value, name, point1):
 
 
 def make_zone(user, name, bounds_info):
-	if new_zone(name, bounds_info, user.username, confirmed=False) is None:
+	zone = new_zone(name, bounds_info, user.username, confirmed=False)
+	if zone is None:
 		tell(user, "An error occurred while creating the zone. Try again or call an op.")
 	else:
-		# TODO something about op confirming it later
 		tell(user, "Zone %s created. Exiting menu." % name)
+		if user in ops():
+			confirmed = True
+			tell(user, "Zone auto-confirmed for ops.")
+		else:
+			tell(user, "You will need to get your zone approved by an op\n"
+			           "for plot protection to work.")
 
 
 def from_cyl(user, value, name):
