@@ -7,6 +7,7 @@ import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_c
 import acls
 import player_cmd as cmd
 import menu_test, testing
+import zone_create_menu
 
 # Set ordering here
 
@@ -29,7 +30,7 @@ plugins.append(menus) # Should probably be before anything that depends on it
 plugins.append(welcome) # Has /help, so high priority. But should be after usernames (for the welcome)
 plugins.append(acls)
 plugins.append(usercolors)
-plugins.append(menu_test)
+plugins.append(zone_create_menu)
 
 plugins.append(testing)
 

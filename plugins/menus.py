@@ -17,7 +17,7 @@ Finally, an extra functionality offered is a prompt menu,
 	this acts like a menu but asks the player a question, which they answer with ":<answer>".
 """
 
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 120
 
 import player_cmd as cmds
 import schedule
@@ -134,7 +134,7 @@ def on_cmd(full_message, user, value):
 
 def on_timeout(user):
 	menu_text, options, exit_callback, (interval, timeout_callback) = user.menu
-	new_menu = timeout_callback(user, value)
+	new_menu = timeout_callback(user, None)
 	user.menu = None
 	if new_menu is not None:
 		display(user, *new_menu)

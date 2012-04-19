@@ -6,6 +6,8 @@ DESCRIPTION = """A menu for defining new zones then submitting them for op appro
 from menus import display, MenuLockError
 from player_cmd import register
 from helpers import ops
+from plugin_helpers import tell
+from zones import get_zones, new_zone
 
 
 def on_start():
@@ -14,7 +16,7 @@ def on_start():
 
 def start_menu(message, user):
 	try:
-		display(ROOT_MENU)
+		display(user, *ROOT_MENU)
 	except MenuLockError:
 		tell(user, "You already have a menu open.\nTry :again to see it or :exit to quit it.")
 
@@ -30,7 +32,7 @@ def from_name(user, name):
 
 	return (
 		"The new zone will be called %s.\n"
-		"Please pick a basic shape for the new zone.\n",
+		"Please pick a basic shape for the new zone.\n" % name,
 		[
 			("Cube", lambda u,v: from_cube(u, v, name)),
 			("Cylinder", lambda u,v: from_cyl(u, v, name))
@@ -71,8 +73,8 @@ def from_cube_pt1(user, value, name):
 		return from_cube(user, None, name)
 	return (
 		"Set first point at (%.2f,%.2f,%.2f)\n"
-		"Please set the second point in the same way." % point1,
-		('prompt', lambda u,v: from_cube_pt2(u, v, name, point1),
+		"Please set the second point in the same way." % tuple(point1),
+		('prompt', lambda u,v: from_cube_pt2(u, v, name, point1)),
 		exit_menu
 	)
 
@@ -82,7 +84,7 @@ def from_cube_pt2(user, value, name, point1):
 		point2 = get_point(user, value)
 	except ValueError:
 		return from_cube_pt1(user, ",".join([str(x) for x in point1]), name)
-	tell(user, "Set second point at (%.2f,%.2f,%.2f)" % point2)
+	tell(user, "Set second point at (%.2f,%.2f,%.2f)" % tuple(point2))
 	return make_zone(user, name, ('cube', user.dimension, point1, point2))
 
 
@@ -93,7 +95,7 @@ def make_zone(user, name, bounds_info):
 	else:
 		tell(user, "Zone %s created. Exiting menu." % name)
 		if user in ops():
-			confirmed = True
+			zone['confirmed'] = True
 			tell(user, "Zone auto-confirmed for ops.")
 		else:
 			tell(user, "You will need to get your zone approved by an op\n"
@@ -117,7 +119,7 @@ def from_cyl_pt(user, value, name):
 		return from_cyl(user, None, name)
 	return (
 		"Set base point at (%.2f,%.2f,%.2f)\n"
-		"Please give the cylinder radius (how far out it extends)." % point,
+		"Please give the cylinder radius (how far out it extends)." % tuple(point),
 		('prompt', lambda u,v: from_cyl_radius(u, v, name, point)),
 		exit_menu
 	)
@@ -129,8 +131,8 @@ def from_cyl_radius(user, value, name, point):
 		if radius <= 0:
 			raise ValueError()
 	except ValueError:
-		tell(user, "%s not a valid positive number." % value
-		return from_cyl_point(user, ",".join([str(x) for x in point]), name)
+		tell(user, "%s not a valid positive number." % value)
+		return from_cyl_pt(user, ",".join([str(x) for x in point]), name)
 	return (
 		"Set radius as %.2f\n"
 		"Please give the zone height (how far up from the base point)." % radius,
@@ -138,13 +140,13 @@ def from_cyl_radius(user, value, name, point):
 		exit_menu
 	)
 
-def from_cyl_height(user, value, name, point1):
+def from_cyl_height(user, value, name, point, radius):
 	try:
 		height = float(value)
 		if height <= 0:
 			raise ValueError()
 	except ValueError:
-		tell(user, "%s not a valid positive number." % value
+		tell(user, "%s not a valid positive number." % value)
 		return from_cyl_radius(user, str(radius), name, point)
 	tell(user, "Set height as %.2f" % height)
 	return make_zone(user, name, ('cylinder', user.dimension, point, radius, height))

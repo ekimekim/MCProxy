@@ -123,7 +123,7 @@ def check_acls(permission, user, position=None):
 	"""Return bool whether user may currently <permission> at <position:defaults to user's position>"""
 	if position is None:
 		position = user.position
-	return not any(permission not in get_acls(zone,user) for zone in zones.get_zones_at_point(user.dimension, position))
+	return not any(permission not in get_acls(zone,user) for zone in zones.get_zones_at_point(user.dimension, position) if zone['confirmed'])
 
 
 def add_direction(position, direction):

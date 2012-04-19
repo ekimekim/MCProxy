@@ -40,13 +40,13 @@ def new_zone(name, bounds_info, creator, **kwargs):
 	zone['name'] = name
 	zone['creator'] = creator
 	zone['bounds_info'] = bounds_info
+	zone.update(kwargs)
 	for fn in new_zone_hooks:
 		ret = fn(zone)
 		if ret is not None and not ret:
 			break
 	else:
 		zones[name] = zone
-		zones.update(kwargs)
 		return zone
 	return None
 
