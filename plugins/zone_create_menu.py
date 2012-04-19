@@ -4,6 +4,11 @@ CONTACT = 'mikelang3000@gmail.com'
 DESCRIPTION = """A menu for defining new zones then submitting them for op approval."""
 
 from menus import display, MenuLockError
+from player_cmd import register
+
+
+def on_start():
+	register("/zone new-menu", start_menu)
 
 
 def start_menu(message, user):
@@ -66,7 +71,8 @@ def from_cube_pt1(user, value, name):
 	return (
 		"Set first point at (%.2f,%.2f,%.2f)\n"
 		"Please set the second point in the same way." % point1,
-		('prompt', lambda u,v: from_cube_pt2(u, v, name, point1)
+		('prompt', lambda u,v: from_cube_pt2(u, v, name, point1),
+		exit_menu
 	)
 
 
@@ -105,13 +111,41 @@ def from_cyl_pt(user, value, name):
 	return (
 		"Set base point at (%.2f,%.2f,%.2f)\n"
 		"Please give the cylinder radius (how far out it extends)." % point,
-		# TODO UPTO
-		('prompt', lambda u,v: from_cyl_radius
+		('prompt', lambda u,v: from_cyl_radius(u, v, name, point)),
+		exit_menu
 	)
+
+
+def from_cyl_radius(user, value, name, point):
+	try:
+		radius = float(value)
+		if radius <= 0:
+			raise ValueError()
+	except ValueError:
+		tell(user, "%s not a valid positive number." % value
+		return from_cyl_point(user, ",".join([str(x) for x in point]), name)
+	return (
+		"Set radius as %.2f\n"
+		"Please give the zone height (how far up from the base point)." % radius,
+		('prompt', lambda u,v: from_cyl_height(u, v, name, point, radius)),
+		exit_menu
+	)
+
+def from_cyl_height(user, value, name, point1):
+	try:
+		height = float(value)
+		if height <= 0:
+			raise ValueError()
+	except ValueError:
+		tell(user, "%s not a valid positive number." % value
+		return from_cyl_radius(user, str(radius), name, point)
+	tell(user, "Set height as %.2f" % height)
+	return make_zone(user, name, ('cylinder', user.dimension, point, radius, height))
 
 
 ROOT_MENU = (
 	"This is the zone creation menu.\n"
+	"For now, this is the easiest way to make a zone.\n"
 	"Type :exit to quit at any time.\n"
 	"First, please give this zone a name.\n",
 	('prompt', from_name),
