@@ -11,7 +11,7 @@ from zones import get_zones, new_zone
 
 
 def on_start():
-	register("/zone new-menu", start_menu)
+	register("/zone new", start_menu)
 
 
 def start_menu(message, user):
