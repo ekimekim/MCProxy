@@ -4,6 +4,7 @@ CONTACT = "mikelang3000@gmail.com"
 DESCRIPTION = """Some simple commands for using the zone stuff:
 	/zone view - show all zones you have admin rights to
 	/zone view NAME - show a specific zone that you have admin rights to and attributes
+	/zone here - show what zones you're currently in, and what you may do.
 	/zone new NAME ARGS - advanced zone create tool
 	/zone destroy NAME - destroy a zone
 	/zone help - list of commands
@@ -28,6 +29,7 @@ def on_start():
 	re_name = r'(?:[^"][^ ]+|"(?:[^"]|\\")+")'
 	register("/zone view", zonelist)
 	register("/zone view (%s)" % re_name, zoneinfo)
+	register("/zone here", zonehere)
 	register("/zone new (%s) (.*)" % re_name, zonenew)
 	register("/zone destroy (%s)" % re_name, zonedestroy)
 	register("/zone help", helplist)
@@ -45,6 +47,20 @@ def zonelist(message, user):
 	for zone in get_zones().values():
 		if controls_zone(user.username, zone):
 			tell(user, zone['name'] + (" (unconfirmed)" if not zone.get('confirmed',True) else ""))
+
+
+def zonehere(message, user):
+	flag = False
+	for zone in user.zones:
+		if 'acls' in zone:
+			perms = zone['acls'].get(user.username, zone['acls']['EVERYONE'])
+			perms = ": " + " ".join(perms)
+		else:
+			perms = ""
+		tell(user, zone['name'] + perms)
+		flag = True
+	if not flag:
+		tell(user, "In no zones.")
 
 
 def zoneinfo(message, user, name):
@@ -207,6 +223,7 @@ def helplist(message, user):
 	           "/zone current - See a list of zones you control that you are currently in.\n"
 	           "/zone view - See a list of zones you control.\n"
 	           "/zone view <zone> - Get info on that zone.\n"
+	           "/zone here - Get list of zones you are currently in, and your permissions.\n"
 	           "/zone new - Create new zone using menu system.\n"
 	           "/zone new <zone> <args> - Advanced only, see help page.\n"
 	           "/zone destroy <zone> - Delete a zone permanently.\n"
@@ -219,6 +236,8 @@ def helpinfo(message, user, command):
 		        "If a zone name given (and you have ADMIN rights to it),"
 		        "displays a bunch of information about the zone.\n"
 		        "Not all this info is likely to be useful, but oh well.",
+		'here': "List all zones that you are currently standing in.\n"
+		        "Also gives what permissions you are allowed in that zone.\n"
 		'destroy': "Delete a zone and all associated information.\n"
 		           "This includes any plot protection the zone may have provided.\n"
 		           "No, ops cannot undo this. Use only if you are really sure.",
