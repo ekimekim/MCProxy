@@ -9,9 +9,10 @@ import player_cmd as cmd
 from helpers import tell
 
 
-WELCOME = "Hey guys! The map has been frozen and will reset back to the snapshot "
-	"every hour. You all have creative mode enabled, so go nuts! "
-	"And make sure to be online at 4pm tomorrow, when the new map comes in!"
+WELCOME = "Hey guys! The map has been frozen and will reset back to the snapshot " \
+	"every hour. You all have creative mode enabled, so go nuts! " \
+	"And make sure to be online at 4pm Saturday, when the new map comes in!\n" \
+	"The snapshot is available online at http://49.156.19.217/snapshot.tar.gz"
 
 
 HELP = """Commands and further help:
