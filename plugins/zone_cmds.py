@@ -16,7 +16,7 @@ Note on names:
 from player_cmd import register
 from plugin_helpers import tell
 from zones import get_zones, new_zone
-from simplejson import loads
+from json import loads
 
 try:
 	from acls import ADMIN
@@ -36,7 +36,7 @@ def on_start():
 
 def controls_zone(username, zone):
 	if 'acls' in zone:
-		return acls.ADMIN in zone['acls'].get(username, zone['acls']['EVERYONE'])
+		return ADMIN in zone['acls'].get(username, zone['acls']['EVERYONE'])
 	else:
 		return username == zone['creator']
 
@@ -44,7 +44,7 @@ def controls_zone(username, zone):
 def zonelist(message, user):
 	for zone in get_zones().values():
 		if controls_zone(user.username, zone):
-			tell(user, zone['name'] + " (unconfirmed)" if not zone.get('confirmed',True) else "")
+			tell(user, zone['name'] + (" (unconfirmed)" if not zone.get('confirmed',True) else ""))
 
 
 def zoneinfo(message, user, name):
@@ -60,18 +60,23 @@ def zoneinfo(message, user, name):
 	keys = ['name','creator','confirmed']
 	for key in keys:
 		if key in zone:
-			user.tell(user, "%s: %s" % (key, zone[key]))
+			tell(user, "%s: %s" % (key, zone[key]))
 
 	keys.append('bounds_info')
+	def dim_to_name(dim):
+		try:
+			return {-1: '(Nether)', 0: '(Overworld)', 1:'(End)'}[dim]
+		except KeyError:
+			return ""
 	def tell_bounds(style, *args, **kwargs):
 		indent = kwargs.pop("indent",0)
 		indent_str = "__" * indent
 		if style == 'cube':
 			dim, point1, point2 = args
-			tell(user, indent_str + "Cube in dim%d from (%.2f,%.2f,%.2f) to (%.2f,%.2f,%.2f)" % ((dim,) + tuple(point1) + tuple(point2)))
+			tell(user, indent_str + "Cube in dim%d%s from (%.2f,%.2f,%.2f) to (%.2f,%.2f,%.2f)" % ((dim, dim_to_name(dim)) + tuple(point1) + tuple(point2)))
 		elif style == 'cylinder':
 			dim, base, radius, height = args
-			tell(user, indent_str + "Cylinder in dim%d from (%.2f,%.2f,%.2f) to radius %.2f and height %.2f" % ((dim,) + tuple(base) + (radius, height)))
+			tell(user, indent_str + "Cylinder in dim%d%s from (%.2f,%.2f,%.2f) to radius %.2f and height %.2f" % ((dim, dim_to_name(dim)) + tuple(base) + (radius, height)))
 		elif style == 'union':
 			tell(user, indent_str + "Union of regions:")
 			for more_info in args:
@@ -82,7 +87,7 @@ def zoneinfo(message, user, name):
 
 	if 'acls' in zone:
 		keys.append('acls')
-		user.tell(user, "acls:")
+		tell(user, "acls:")
 		for name in zone['acls']:
 			if name == 'EVERYONE':
 				continue
@@ -103,12 +108,50 @@ def zonenew(message, user, name, args):
 	if args.startswith("json "):
 		try:
 			data = loads(args[5:])
-		except:
+		except Exception:
 			tell(user, "Bad json.")
 			return
 
+		def validate_point(data):
+			if type(data) != list:
+				raise ValueError()
+			if len(data) != 3:
+				raise ValueError()
+			if not all(type(x) in (int, float) for x in data):
+				raise ValueError()
+
 		def validate_info(data):
-			# TODO UPTO
+			if type(data) != list:
+				raise ValueError()
+			style = data[0]
+			if style == 'cube':
+				dim, point1, point2 = data[1:]
+				if type(dim) != int or dim not in (-1,0,1):
+					raise ValueError()
+				validate_point(point1)
+				validate_point(point2)
+			elif style == 'cylinder':
+				dim, base, radius, height = data[1:]
+				if type(dim) != int or dim not in (-1,0,1):
+					raise ValueError()
+				if not validate_point(base):
+					raise ValueError()
+				if type(radius) not in (int, float) or radius <= 0:
+					raise ValueError()
+				if type(height) not in (int, float) or height <= 0:
+					raise ValueError()
+			elif style == 'union':
+				[validate_info(x) for x in data[1:]]
+			else:
+				raise ValueError()
+
+		try:
+			validate_info(data)
+		except ValueError:
+			tell(user, "Invalid JSON, see /help json for schema.")
+			return
+
+		zone = new_zone(name, data, user.username)
 
 	else:
 		args = filter(None, args.split())
@@ -124,7 +167,7 @@ def zonenew(message, user, name, args):
 				point1 = args[:3]
 				point2 = args[3:]
 				zone = new_zone(name, ('cube',dim,point1,point2), user.username)
-			elif style == 'cyl':
+			elif style == 'cylinder':
 				if len(args) != 5:
 					raise ValueError()
 				base = args[:3]
@@ -161,6 +204,7 @@ def helplist(message, user):
 	           "In all commands below, <zone> should be replaced with\n"
 	           "the name of a zone you control, eg. /zone view my_zone\n"
 	           "If the name has a space in it, put it in double quotes.\n"
+	           "/zone current - See a list of zones you control that you are currently in.\n"
 	           "/zone view - See a list of zones you control.\n"
 	           "/zone view <zone> - Get info on that zone.\n"
 	           "/zone new - Create new zone using menu system.\n"
@@ -172,32 +216,33 @@ def helplist(message, user):
 def helpinfo(message, user, command):
 	helptext = {
 		'view': "If no zone given, shows a list of zone names.\n"
-		        "If a zone name given (and you have ADMIN rights to it),\n"
+		        "If a zone name given (and you have ADMIN rights to it),"
 		        "displays a bunch of information about the zone.\n"
 		        "Not all this info is likely to be useful, but oh well.",
 		'destroy': "Delete a zone and all associated information.\n"
 		           "This includes any plot protection the zone may have provided.\n"
-		           "No, ops cannot undo this. Use only if you are really sure."
-		'new': "When used with nothing else given, ie. just /zone new, opens menu\n"
-		       "that will make a new zone step by step.\n"
-		       "For advanced use, give the zone name followed by a bounds definition.\n"
+		           "No, ops cannot undo this. Use only if you are really sure.",
+		'new': "When used with nothing else given, ie. just /zone new, "
+		       "opens menu that will make a new zone step by step.\n"
+		       "For advanced use, give the zone name followed by bounds args.\n"
 		       "Bounds definitions are one of the following:\n"
 		       "__ cube <dim> <x1> <y1> <z1> <x2> <y2> <z2>\n"
 		       "__ cylinder <dim> <x> <y> <z> <radius> <height>\n"
-		       "__ json <json>\n"
-		       "Note that <dim> should be 0 for overworld, -1 for Nether, 1 for End\n"
-		       "The json bounds defn is special. The remainder of the line should be\n"
-		       "valid JSON. If you don't know what that is, ignore it. JSON schema\n"
+		       "__ json <json> (EXPERIMENTAL, MAY NOT WORK)\n"
+		       "Note that <dim> should be -1,0,1 for overworld, Nether, End\n"
+		       "The json bounds defn is special. The remainder of the line "
+		       "should be valid JSON. If you don't know what that is, ignore it. JSON schema "
 		       "is given by typing /zone help json",
-		'help': "Ha ha, you're really funny. If you're reading this you know how\n"
-		        "to use the help function already, moron."
-		'json': "In these definitions, we use the syntax <name:type> or just <type>\n"
+		'help': "Ha ha, you're really funny. If you're reading this\n"
+		        "you know how to use the help function already, moron.",
+		'json': "In these definitions, we use the syntax <name:type> or just <type>.\n"
 		        "point := [<x:float>, <y:float>, <z:float>]\n"
 		        "bounds_info :=\n"
 		        "__ ['cube', <dim:int>, <point1:point>, <point2:point>] OR\n"
-		        "__ ['cylinder', <dim:int>, <base:point>, <radius:float>, <height:float>] OR\n"
+		        "__ ['cylinder', <dim:int>, <base:point>, <radius:float>,\n"
+		        "____ <height:float>] OR\n"
 		        "__ ['union', <bounds_info>, <bounds_info>, ...]\n"
-		        "For example, the following describes a zone that covers both a cylinder\n"
+		        "For example, the following describes a zone that covers both a cylinder "
 		        "in Overworld and a cube in the Nether:\n"
 		        "['union', ['cylinder', 0, [128,64,-128], 8, 64], \n"
 		        "__ ['cube', -1, [64,64,-64], [80,128,-80]]]"
