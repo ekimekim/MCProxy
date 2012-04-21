@@ -56,7 +56,7 @@ def new_zone(name, bounds_info, creator, **kwargs):
 def bounds_cube(dim, a, b):
 	ranges = zip(a,b) # Ranges is a list of (a_coord, b_coord)
 	for axis in ranges:
-		axis = sorted(axis)
+		axis.sort()
 	def cube_test(current_dim, point):
 		return current_dim == dim and all(lower <= coord <= upper for coord, (lower, upper) in zip(point, ranges))
 	return cube_test
