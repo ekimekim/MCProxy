@@ -69,7 +69,7 @@ def zoneinfo(message, user, name):
 	except KeyError:
 		tell(user, "That zone doesn't exist!")
 		return
-	if not controls_zone(user.username, zone):
+	if not controls_zone(user.username, zone) and not user.username in ops():
 		tell(user, "That isn't your zone.")
 		return
 
@@ -209,7 +209,7 @@ def zonedestroy(message, user, name):
 	except KeyError:
 		tell(user, "That zone doesn't exist!")
 		return
-	if not controls_zone(user.username, zone):
+	if not controls_zone(user.username, zone) and not user.username in ops():
 		tell(user, "That isn't your zone.")
 	get_zones().pop(name)
 	tell(user, "Zone deleted.")
