@@ -9,7 +9,7 @@ from config import *
 def ops():
 	"""Get list of op usernames."""
 	ret = open(os.path.join(SERVER_DIR, 'ops.txt')).read().strip().split('\n')
-	ret = [unicode(name) for name in ret]
+	ret = [unicode(name.lower()) for name in ret]
 	return ret
 
 def server_cmd(command):
@@ -54,7 +54,7 @@ def color(name):
 
 def all_users():
 	"""Returns list of users who ever played on the server"""
-	return [name[:-4] for name in os.listdir(os.path.join(WORLD_DIR, 'players'))]
+	return [unicode(name[:-4]).lower() for name in os.listdir(os.path.join(WORLD_DIR, 'players'))]
 
 
 def tell(user, message, prefix=''):

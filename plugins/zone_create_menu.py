@@ -53,7 +53,8 @@ def from_cube(user, value, name):
 
 def get_point(user, value):
 	if not value:
-		return user.position
+		x,y,z = user.position
+		return (x, y, z)
 	try:
 		point = [float(x.strip()) for x in value.split(',')]
 	except ValueError:

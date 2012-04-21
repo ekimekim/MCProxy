@@ -7,7 +7,7 @@ import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_c
 import acls
 import player_cmd as cmd
 import menu_test, testing
-import zone_create_menu, zone_cmds
+import zone_create_menu, zone_cmds, acl_cmds, zone_confirm
 
 # Set ordering here
 
@@ -32,6 +32,8 @@ plugins.append(acls)
 plugins.append(usercolors)
 plugins.append(zone_create_menu)
 plugins.append(zone_cmds)
+plugins.append(zone_confirm)
+plugins.append(acl_cmds)
 
 plugins.append(testing)
 
