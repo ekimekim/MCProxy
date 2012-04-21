@@ -16,7 +16,7 @@ def uncaught_command(message, user, command):
 		if command.startswith(mc_cmd):
 			return False # Do not drop packet
 	if user.username in ops():
-		tell(user, "Warning: I don't recognise %s" % message
+		tell(user, "Warning: I don't recognise %s" % message)
 		return False
 	tell(user, "Bad command: %s" % command)
 	return True # Drop packet
