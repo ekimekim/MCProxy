@@ -65,7 +65,7 @@ def zonehere(message, user):
 
 
 def zoneinfo(message, user, name):
-	name.strip('"')
+	name = name.strip('"')
 
 	try:
 		zone = get_zones()[name]
@@ -120,7 +120,7 @@ def zoneinfo(message, user, name):
 
 
 def zonenew(message, user, name, args):
-	name.strip('"')
+	name = name.strip('"')
 
 	if name in get_zones():
 		tell(user, "Name already taken.")
@@ -209,7 +209,7 @@ def zonenew(message, user, name, args):
 
 
 def zonedestroy(message, user, name):
-	name.strip('"')
+	name = name.strip('"')
 
 	try:
 		zone = get_zones()[name]
