@@ -237,7 +237,7 @@ def helpinfo(message, user, command):
 		        "displays a bunch of information about the zone.\n"
 		        "Not all this info is likely to be useful, but oh well.",
 		'here': "List all zones that you are currently standing in.\n"
-		        "Also gives what permissions you are allowed in that zone.\n"
+		        "Also gives what permissions you are allowed in that zone.\n",
 		'destroy': "Delete a zone and all associated information.\n"
 		           "This includes any plot protection the zone may have provided.\n"
 		           "No, ops cannot undo this. Use only if you are really sure.",

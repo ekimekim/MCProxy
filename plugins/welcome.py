@@ -9,9 +9,12 @@ import player_cmd as cmd
 from helpers import tell
 
 
-WELCOME = "Hey guys! The map has been frozen and will reset back to the snapshot "
-	"every hour. You all have creative mode enabled, so go nuts! "
-	"And make sure to be online at 4pm tomorrow, when the new map comes in!"
+WELCOME = """Welcome to ekimekim's new and improved server!
+New here? Type /firsttime to get started.
+To claim land and have plot protection, read /zone help and /acls help
+If you'd like to move something over from the old map, email me the coordinates at mikelang3000@gmail.com
+Old map available for download at http://49.156.19.217/snapshot.tar.gz
+"""
 
 
 HELP = """Commands and further help:
@@ -19,7 +22,6 @@ HELP = """Commands and further help:
 /rules: Ignorance is no excuse. READ!!!
 /info: Plans for the future.
 /news: Re-send the login message.
-TODO /admin: Send a message. Admins will read it later.
 /color help: Get help on the chat color system.
 /zone help: Get help on the zone system
 /acls help: Get help on getting plot protection
@@ -30,6 +32,7 @@ The following standard minecraft commands also work:
 
 FIRSTTIME = """Welcome to ekimekim's server!
 First and foremost, read /rules.
+There's quite a few commands to use, check /help.
 This is a survival server. You can build, but
 you have to get the resources first!
 While we employ anti-griefing technology,

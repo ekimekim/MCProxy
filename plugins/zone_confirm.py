@@ -11,6 +11,7 @@ Ops gain commands:
 import zones
 from player_cmd import register
 from helpers import ops
+from plugin_helpers import tell
 
 def set_confirm(zone):
 	zone['confirmed'] = False
@@ -18,15 +19,16 @@ def set_confirm(zone):
 def on_start():
 	zones.new_zone_hooks.append(set_confirm)
 	register("/zone op help", ophelp)
-	register("/zone op wool (.*)", woolzone)
-	register("/zone op confirm (.*)", confirmzone)
+	register("/zone op wool (.*)", zonewool)
+	register("/zone op confirm (.*)", zoneconfirm)
 
 def ops_only(fn):
 	def wrapped_fn(message, user, *args):
-		if user not in ops():
+		if user.username not in ops():
 			return False
 		else:
 			return fn(message, user, *args)
+	return wrapped_fn
 
 @ops_only
 def ophelp(message, user):
@@ -37,7 +39,7 @@ def ophelp(message, user):
 	           "__ red: In zone besides one given.\n"
 	           "__ yellow: In given zone AND at least one other.\n"
 	           "__ You will need to log out/in to reverse changes.\n"
-	           "/zone op confirm <zone> - Confirm zone."
+	           "/zone op confirm <zone> - Confirm zone.")
 
 
 @ops_only
@@ -45,7 +47,8 @@ def zoneconfirm(message, user, name):
 	if name not in zones.get_zones():
 		tell(user, "Zone does not exist.")
 		return
-	zones.get_zones()['confirmed'] = True
+	zones.get_zones()[name]['confirmed'] = True
+	tell(user, "Success")
 
 
 @ops_only
