@@ -65,6 +65,8 @@ def zonehere(message, user):
 
 
 def zoneinfo(message, user, name):
+	name.strip('"')
+
 	try:
 		zone = get_zones()[name]
 	except KeyError:
@@ -118,6 +120,8 @@ def zoneinfo(message, user, name):
 
 
 def zonenew(message, user, name, args):
+	name.strip('"')
+
 	if name in get_zones():
 		tell(user, "Name already taken.")
 		return
@@ -205,6 +209,8 @@ def zonenew(message, user, name, args):
 
 
 def zonedestroy(message, user, name):
+	name.strip('"')
+
 	try:
 		zone = get_zones()[name]
 	except KeyError:
