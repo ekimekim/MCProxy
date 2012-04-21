@@ -16,6 +16,7 @@ Note on names:
 
 from player_cmd import register
 from plugin_helpers import tell
+from helpers import ops
 from zones import get_zones, new_zone
 from json import loads
 
