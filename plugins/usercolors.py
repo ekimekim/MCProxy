@@ -12,6 +12,8 @@ from packet_decoder import Packet
 from helpers import ops, color, colors, all_users, active_users, tell
 import player_cmd as cmd
 
+MAX_CHAT_LENGTH = 119
+
 defaults = {
 	'all': color('white'),
 	'inactive': color('dark gray'),
@@ -39,9 +41,17 @@ def on_packet(packet, user_obj, to_server):
 		names.update(onlines)
 		names.update(ops_dict)
 		names.update(player)
-		packet.data['text'] = prefs['all'] + packet.data['text']
+		s = prefs['all'] + packet.data['text']
 		for name in names:
-			packet.data['text'] = packet.data['text'].replace(name, names[name] + name + prefs['all'])
+			i = 0
+			while i < len(s):
+				if s[i:i+len(name)].lower() == name:
+					s = s[:i] + names[name] + name + prefs['all'] + s[i+len(name):]
+					i += len(name)
+				else:
+					i += 1
+		if len(s) <= MAX_CHAT_LENGTH: # Do nort replace if overlength
+			packet.data['text'] = s
 	return packet
 
 HELP = """Chat color commands:
