@@ -8,7 +8,8 @@ from plugin_helpers import tell
 def on_start():
 	cmd.register('/testzone new ([^ ]+)', on_cmd)
 	cmd.register('/testzone view', on_cmd2)
-	cmd.register(r'/testacl ([^ ]+) ((?:add)|(?:rm)) ([^ ]+) ([^ ]+)', on_cmd3)
+	re_name = r'(?:[^"][^ ]+|"(?:[^"]|\\")+")'
+	cmd.register(r'/testacl (%s) ((?:add)|(?:rm)) ([^ ]+) ([^ ]+)' % re_name, on_cmd3)
 
 def on_cmd(message, user, name):
 	offset = user.position
@@ -28,6 +29,7 @@ def on_cmd2(message, user):
 
 
 def on_cmd3(message, user, zone, add_or_rm, username, rule):
+	zone = zone.strip('"')
 	try:
 		acls = get_zones()[zone]['acls']
 	except KeyError:
