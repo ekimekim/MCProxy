@@ -28,6 +28,7 @@ ADMIN = 'ADMIN'
 
 DEFAULTS = [ENTRY]
 DEFAULT_ADMIN = [ENTRY, INTERACT, MODIFY, ADMIN]
+ALL_PERMS = [ENTRY, INTERACT, MODIFY, ADMIN]
 
 
 # The following item ids are NOT block placements and may be used to interact.
