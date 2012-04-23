@@ -11,14 +11,19 @@ DESCRIPTION = """Commands for controlling the acls of a zone:
 
 from player_cmd import register
 from plugin_helpers import tell
+from helpers import all_users, ops
+from zones import get_zones
+from acls import ALL_PERMS, ADMIN
+
 
 def on_start():
+	re_name = r'(?:[^"][^ ]+|"(?:[^"]|\\")+")'
 	register("/acls help", aclhelp)
 	register("/acls commands", aclcmdhelp)
-#	register("/acls set ([^ ]+)((?: [A-Z]+)+)", aclset)
-#	register("/acls add ([^ ]+) ([A-Z]+)", acladd)
-#	register("/acls remove ([^ ]+) ([A-Z]+)", aclrm)
-#	register("/acls clear ([^ ]+)", aclclear)
+	register("/acls (%s) set ([^ ]+)((?: [A-Z]+)+)" % re_name, aclset)
+	register("/acls (%s) add ([^ ]+) ([A-Z]+)" % re_name, acladd)
+	register("/acls (%s) remove ([^ ]+) ([A-Z]+)" % re_name, aclrm)
+	register("/acls (%s) clear ([^ ]+)" % re_name, aclclear)
 
 
 def aclhelp(message, user):
@@ -33,11 +38,92 @@ def aclhelp(message, user):
 	           "ADMIN - This permission allows you to change the permissions of this zone.\n"
 	           "Type /acls commands for help on how to modify permissions.")
 
-def aclcmdhelp(message, user):
-	tell(user, "Sorry, these commands aren't implemented yet. For now, your zones will default to "
-	           "allowing you full access and everyone else ENTRY only. They should be done by tomorrow.")
 
-#def aclset(message, user, name, ):
-#def acladd(message, user):
-#def aclrm(message, user):
-#def aclclear(message, user):
+def aclcmdhelp(message, user):
+	tell(user, "ACL commands:\n"
+	           "/acls <zone> set <user> <permissions>\n"
+	           "__ Set the user's permissions in that zone to exactly\n"
+	           "__ the permissions given. Permissions should be\n"
+	           "__ space-seperated, eg. ENTRY INTERACT MODIFY\n"
+	           "/acls <zone> add <user> <permission>\n"
+	           "__ Add a single permission to what a user can do.\n"
+	           "/acls <zone> remove <user> <permission>\n"
+	           "__ Remove a single permission from what a user can do.\n"
+	           "/acls <zone> clear <user>\n"
+	           "__ Reset the given user to use the default permissions.\n"
+	           "To modify the default permissions, replace <user> with EVERYONE.")
+
+
+def common(fn):
+	"""Wrap funciton. Get zone based on name and .lower usernames."""
+	def wrapped_fn(message, user, zone, name, *args):
+
+		zone_original = zone
+		zone = zone.strip('"')
+		if zone not in get_zones():
+			tell(user, "Zone does not exist.")
+			print zone
+			return
+		zone = get_zones()[zone]
+		if 'acls' not in zone:
+			tell(user, "Sorry, that zone does not appear to support ACLs.\n"
+			           "You may need to contact an op to resolve this.")
+			return
+
+		if name != 'EVERYONE':
+			name = name.lower()
+			if name not in all_users() and name not in zone['acls']:
+				tell(user, "Warning: %s is not a player known to this server.\n"
+				           "If you have made a mistake, type:\n/acls %s clear %s" % (zone_original, name))
+
+		if ADMIN not in zone['acls'].get(name, zone['acls']['EVERYONE']) and user.username not in ops():
+			tell(user, "You do not have permission to modify ACLs for this zone. "
+			           "If you have accidentially locked yourself out, please contact an op for assistance.")
+			return
+
+		return fn(message, user, zone, name, *args)
+	return wrapped_fn
+
+
+@common
+def aclset(message, user, zone, name, perms):
+	perms = filter(None, perms.split())
+	for perm in perms:
+		if perm not in ALL_PERMS:
+			tell(user, "%s not an ACL." % perm)
+			return
+	zone['acls'][name] = perms
+	tell(user, "Success")
+
+
+@common
+def acladd(message, user, zone, name, perm):
+	if perm not in ALL_PERMS:
+		tell(user, "%s not an ACL." % perm)
+	current = zone['acls'].setdefault(name, zone['acls']['EVERYONE'][:])
+	if perm in current:
+		tell(user, "%s can already %s" % (name, perm))
+	else:
+		current.append(perm)
+		tell(user, "Success")
+
+
+@common
+def aclrm(message, user, zone, name, perm):
+	if perm not in ALL_PERMS:
+		tell(user, "%s not an ACL." % perm)
+	current = zone['acls'].setdefault(name, zone['acls']['EVERYONE'][:])
+	if perm not in current:
+		tell(user, "%s already can't %s" % (name, perm))
+	else:
+		current.remove(perm)
+		tell(user, "Success")
+
+
+@common
+def aclclear(message, user, zone, name):
+	if name not in zone['acls']:
+		tell(user, "%s doesn't have any specific ACLs" % name)
+	else:
+		zone['acls'].pop(name)
+		tell(user, "Success")
