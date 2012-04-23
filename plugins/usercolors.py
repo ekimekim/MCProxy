@@ -12,6 +12,8 @@ from packet_decoder import Packet
 from helpers import ops, color, colors, all_users, active_users, tell
 import player_cmd as cmd
 
+from config import *
+
 MAX_CHAT_LENGTH = 119
 
 defaults = {
@@ -35,6 +37,7 @@ def on_packet(packet, user_obj, to_server):
 		offlines = dict([(user, prefs['inactive']) for user in all_users()])
 		onlines = dict([(user, prefs['active']) for user in active_users()])
 		ops_dict = dict([(user, prefs['ops']) for user in ops()])
+		
 		player = {user_obj.username: prefs['me']}
 		names = {}
 		names.update(offlines)

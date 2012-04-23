@@ -1,0 +1,125 @@
+
+===============================================================================
+core:
+
+-------------------------------------------------------------------------------
+plugins.py:
+
+Plugins have trouble defining an area where they can place files 
+(like admin_msg.py) so I completely changed how the plugin loading system works. 
+Each plugin is called via a loader which does the importing like the original 
+but it also, if a flag is raised, creates a directory in the plugin folder with 
+the same name as the plugin. A function is then available for to get the paths 
+to these directories. Import aliasing is still supported. 
+
+I've changed any hard path's in the plugins to point to one of these 
+directories.
+
+
+-------------------------------------------------------------------------------
+config.py:
+
+Vanilla minecraft keeps only one world directory. Bukkit uses multiple so a 
+single variable won't work. Instead changed WORLD_DIR to a WORLD_DIRS = [] were 
+you can link to each world. In vanilla this would just be:
+         
+WORLD_DIRS = [os.path.join(SERVER_DIR, 'world')] 
+        
+In bukkit it becomes 
+        
+WORLD_DIRS = [os.path.join(SERVER_DIR, 'world'), 
+              os.path.join(SERVER_DIR, 'world_nether'), 
+              os.path.join(SERVER_DIR, 'world_the_end')]
+
+This will also allow for extensions into additional worlds that are added onto 
+the server.
+
+Other changes:
+
+- Reformatted the config file.
+
+- added in a variable LOG_DIR where I'm sending all logs.
+-------------------------------------------------------------------------------
+helpers.py:
+
+ - Changed how the all_users command works with respect to the changes in 
+   config. Although this is only for neatness. Bukkit doesn't actually store 
+   player info in anything but the 'world' world. 
+
+
+- Changed how ops worked as it would hang if the ops.txt file was empty.
+
+- Changed server_cmd to work on my server.
+
+===============================================================================
+plugins: (I didn't include any of the zones files as you seem to be messing with
+          them still)
+
+-------------------------------------------------------------------------------
+adminmsg.py:
+
+- Got it working again. Alerts ops when they log in if the message file is not 
+  empty.
+
+-------------------------------------------------------------------------------
+bad_cmd.py:
+
+- Removed the ban/pardon restrictions as they don't apply any more.
+
+- Not implementing as I'm using mods on the server so I have external commands.
+
+-------------------------------------------------------------------------------
+log_all.py:
+
+- Changed a hard link section to:
+	f = open(path.join(LOG_DIR, "all_packets.log"), 'a')
+  and added some imports for that to work.
+
+-------------------------------------------------------------------------------
+log_sorted.py:
+
+- Changed a directory link to:
+	DIR = os.path.join(LOG_DIR, "packets")
+    if not os.path.exists(path):
+        os.makedirs(path)
+  so it should stop throwing exceptions when it can't find the directory.
+
+-------------------------------------------------------------------------------
+menu_test.py:
+
+- The tests work fine but removing as test code.
+
+-------------------------------------------------------------------------------
+persistent_store.py:
+
+- Was getting errors as the JSON files did not exist. Made it so that if they
+  don't exist a empty dict is used instead.
+- Also changed localisation to its own folder in plugins.
+- several changes so just diff the two versions.
+
+-------------------------------------------------------------------------------
+slimeballs.py:
+
+- made this work again.
+
+-------------------------------------------------------------------------------
+welcome.py:
+
+- Edited for blocksoc.
+
+===============================================================================
+Questions:
+
+-As you are still messing with them I didn't implement or alter the zone files. 
+ That said, will be there be problems if I add additional worlds/dimensions to 
+ the server? 
+
+===============================================================================
+Test Script:
+
+./killproxy 
+clear
+cat ../logs/proxy.log 
+rm -r ../logs/*
+python2.7 proxy.py
+

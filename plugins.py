@@ -1,41 +1,75 @@
+
+
 import sys
+import os
 from config import *
 sys.path.append(PLUGIN_PATH)
 
-# Import plugins here
-import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_cmd, welcome, menus, schedule, plugin_helpers, zones, persistent_store
-import acls
-import player_cmd as cmd
-import menu_test, testing
-import zone_create_menu, zone_cmds, acl_cmds, zone_confirm
-
-# Set ordering here
-
 plugins = []
+imports = {}
+paths = {}
 
+
+def addPlugin(pluginName, hasDir = False):
+    """ Import a plugin. If the hasDir flag is raised a directory for the plugin in the plugin path is created if it doesn't already exist. """
+    if hasDir:
+        path = os.path.join(PLUGIN_PATH, pluginName)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        paths[pluginName] = path
+    else:
+       paths[pluginName] = None 
+    plugin = __import__(pluginName)
+    imports[pluginName] = plugin
+    plugins.append(plugin)
+    
+
+def addAliasPlugin(pluginName,alias, hasDir = False):
+    """ Import a plugin and refer to it as the alias. If the hasDir flag is raised a directory for the plugin is created in the plugin path if it doesn't already exist under both the plugin name and the alias. """
+    if hasDir:
+        path = os.path.join(PLUGIN_PATH, pluginName)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        paths[alias] = path
+        paths[pluginName] = path
+    else:
+        paths[alias] = None
+        paths[pluginName] = None 
+    plugin = __import__(pluginName)
+    plugin.__name__ = alias
+    imports[alias] = plugin
+    plugins.append(plugin)
+        
+def getPluginDir(pluginName):
+    """Returns the path to the plugin directory of the plugin if the plugin has one or None otherwise."""
+    return paths[pluginName]
+    
+def getPlugin(pluginName):
+    return imports[pluginName]
+    
 # basic logging
-#plugins.append(log_all) # Only on when needed - chews disk space
-plugins.append(log_sorted) # Always first to catch all raw packets
+#addPlugin("log_all")               # Only on when needed - chews disk space
+addPlugin("log_sorted")             # Always first to catch all raw packets
 
 # utility
-plugins.append(usernames) # The earlier the better, name the login packets sooner.
-plugins.append(schedule) # Should probably be before anything that depends on it
-plugins.append(persistent_store) # MUST be before anything that uses it
-plugins.append(plugin_helpers) # Lots of things depend on this. Do it early.
-plugins.append(zones) # The earlier, the more up to date positions are
-plugins.append(cmd) # Should probably be before anything that depends on it
-plugins.append(menus) # Should probably be before anything that depends on it
+addPlugin("usernames")              # The earlier the better, name the login packets sooner.
+addPlugin("schedule")               # Should probably be before anything that depends on it
+addPlugin("persistent_store",True)  # MUST be before anything that uses it
+addPlugin("plugin_helpers")         # Lots of things depend on this. Do it early.
+
+addAliasPlugin("player_cmd", "cmd") # Should probably be before anything that depends on it       
+addPlugin("menus")                  # Should probably be before anything that depends on it  
 
 # features
-plugins.append(welcome) # Has /help, so high priority. But should be after usernames (for the welcome)
-plugins.append(acls)
-plugins.append(usercolors)
-plugins.append(zone_create_menu)
-plugins.append(zone_cmds)
-plugins.append(zone_confirm)
-plugins.append(acl_cmds)
+addPlugin("welcome")                # Has /help, so high priority. But should be after usernames (for the welcome)
+addPlugin("adminmsg", True)
+addPlugin("usercolors")
+addPlugin("slimeballs",True) 
 
-plugins.append(testing)
+#addPlugin("no_changes") 
 
-# tail
-plugins.append(bad_cmd) # Always last out of chat commands
+
+
+
+
+

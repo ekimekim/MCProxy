@@ -1,10 +1,13 @@
+
 import time
 
+from config import *
+from os import path
 f = None
 
 def on_start():
 	global f
-	f = open("/var/minecraft/logs/all_packets.log", 'a')
+	f = open(path.join(LOG_DIR, "all_packets.log"), 'a')
 
 def on_packet(packet, user, to_server):
 	global f

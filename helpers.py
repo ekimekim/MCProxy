@@ -8,18 +8,28 @@ from config import *
 
 def ops():
 	"""Get list of op usernames."""
-	ret = open(os.path.join(SERVER_DIR, 'ops.txt')).read().strip().split('\n')
-	ret = [unicode(name.lower()) for name in ret]
+	p = os.path.join(SERVER_DIR, 'ops.txt')
+	ret = []
+	if os.path.isfile(p):
+		f = open(p, 'r')
+		for line in f:
+			ret.append(unicode(line.lower()))
 	return ret
 
 def server_cmd(command):
-	"""Send a command to server console. May OSError."""
-	p = Popen([COMMAND_SCRIPT, command], stderr=PIPE)
-	ret = p.wait()
-	if ret:
-		out, err = p.communicate()
-		raise OSError(command, ret, err.read().strip())
+	command = command.strip()
+	#strip of the leading '/' of the command, not needed.
+	if command[0] == '/':
+		command = command[1:]
+
+	logging.info("Sending server command: " + command)
+	send = "screen -S " + SERVER_SCREEN_NAME + " -X stuff \"" + command + "\n\""
+	status = os.system(send)
+	logging.info("Exit Status: " + str(status))
+	if status != 0:
+		logging.critical("Failed to send command")
 	return
+
 
 def point_dist(p, q):
 	"""Gets distance between points a and b. They should both be tuples of the same length."""
@@ -54,7 +64,14 @@ def color(name):
 
 def all_users():
 	"""Returns list of users who ever played on the server"""
-	return [unicode(name[:-4]).lower() for name in os.listdir(os.path.join(WORLD_DIR, 'players'))]
+	names = []
+	for world in WORLD_DIRS:
+		for name in os.listdir(os.path.join(world, 'players')):
+			n = name[:len(name)-4]
+			if n not in names:
+				names.append(u'' + n)
+	names.sort()
+	return names
 
 
 def tell(user, message, prefix=''):

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [ "$1" == "debug" ]; then
-	name="python proxy\.py debug"
+	name="python2.7 proxy\.py debug"
 else
-	name="python proxy\.py"
+	name="python2.7 proxy\.py"
 fi
 
 { ps aux | grep "$name" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null ; } &&

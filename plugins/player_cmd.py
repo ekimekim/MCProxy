@@ -21,22 +21,22 @@ def on_start():
 
 
 def on_packet(packet, user, to_server):
-	global registrations
+    global registrations
 
-	if not to_server or packet.name() != 'Chat message':
-		return packet
+    if not to_server or packet.name() != 'Chat message':
+	    return packet
 
-	message = str(packet.data['text']) # de-unicode
-
-	for regex, func in registrations:
-		match = regex.match(message)
-		if match is not None:
-			ret = func(message, user, *match.groups())
-			if ret is None or ret:
-				break # break skips the else and so returns [] immediately
-	else: # runs only if break is never reached, ie. no dropping matches.
-		return packet
-	return []
+    message = str(packet.data['text']) # de-unicode
+    from plugin_helpers import tell
+    for regex, func in registrations:
+	    match = regex.match(message)
+	    if match is not None:
+		    ret = func(message, user, *match.groups())
+		    if ret is None or ret:
+			    break # break skips the else and so returns [] immediately
+    else: # runs only if break is never reached, ie. no dropping matches.
+	    return packet
+    return []
 
 
 def register(regex, func):

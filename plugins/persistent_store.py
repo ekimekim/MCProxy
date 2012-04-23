@@ -1,4 +1,4 @@
-
+NAME = "persistent_store"
 AUTHOR = 'ekimekim'
 CONTACT = 'mikelang3000@gmail.com'
 DESCRIPTION = """A persistent data store for plugins.
@@ -15,13 +15,14 @@ The top-level object itself must be either a list or a dict.
 import json, os
 
 from config import SERVER_DIR, DEBUG
+import plugins
 
 if not DEBUG:
-	JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.json')
-	JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.json~')
+	JSON_FILE = os.path.join(plugins.getPluginDir(NAME), 'persistent_data.json')
+	JSON_FILE_BACKUP = os.path.join(plugins.getPluginDir(NAME), '.persistent_data.json~')
 else:
-	JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.debug.json')
-	JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.debug.json~')
+	JSON_FILE = os.path.join(plugins.getPluginDir(NAME), 'persistent_data.debug.json')
+	JSON_FILE_BACKUP = os.path.join(plugins.getPluginDir(NAME), '.persistent_data.debug.json~')
 
 
 class Store():
@@ -45,8 +46,12 @@ class Store():
 
 
 def on_start():
-	global data
-	data = json.load(open(JSON_FILE, 'rU'))
+    global data
+    if os.path.isfile(JSON_FILE):
+        data = json.load(open(JSON_FILE, 'rU'))
+    else:
+        data = {}
+        
 	if type(data) != dict:
 		raise ValueError("Bad data in json store")
 
@@ -60,6 +65,7 @@ def on_tick(users):
 
 
 def sync():
-	global data
-	os.rename(JSON_FILE, JSON_FILE_BACKUP)
-	json.dump(data, open(JSON_FILE, 'w'))
+    global data
+    if os.path.isfile(JSON_FILE):
+        os.rename(JSON_FILE, JSON_FILE_BACKUP)
+    json.dump(data, open(JSON_FILE, 'w'))
