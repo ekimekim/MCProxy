@@ -15,7 +15,7 @@ plugins = []
 
 # basic logging
 #plugins.append(log_all) # Only on when needed - chews disk space
-#plugins.append(log_sorted) # Always first to catch all raw packets
+plugins.append(log_sorted) # Always first to catch all raw packets
 
 # utility
 plugins.append(usernames) # The earlier the better, name the login packets sooner.
