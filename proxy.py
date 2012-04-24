@@ -48,6 +48,7 @@ def main():
 	import helpers # Hax before import does important hax
 	helpers.active_users = active_users
 	helpers.send_packet = send_packet
+	helpers.InvalidUserError = InvalidUserError
 
 	from plugins import plugins as _plugins # Lazy import prevents circular references
 
@@ -318,7 +319,11 @@ def send_packet(packet, user, to_server):
 	"""Takes packet, user object and whether to send to server (as though from user) or vice versa.
 	Simulates that kind of packet having been recived and passes it on as normal,
 	ie. a packet still goes through the whole list of plugins.
+	Raises InvalidUserError if user no longer exists.
 	"""
+	if user not in user_map.values():
+		raise InvalidUserError(user)
+
 	packets = handle_packet(packet, user, to_server)
 	
 	try:
@@ -363,6 +368,10 @@ class User(object):
 			return "<unknown>@%s:%s" % self.addr
 		else:
 			return "%s@%s:%s" % ((self.username,) + self.addr)
+
+
+class InvalidUserError(Exception):
+	pass
 
 
 def active_users():

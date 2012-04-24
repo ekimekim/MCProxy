@@ -4,6 +4,8 @@ CONTACT = 'mikelang3000@gmail.com'
 DESCRIPTION = """A module for registering a callback to occur at a later time."""
 
 import time
+import logging
+from helpers import InvalidUserError
 
 events = [] # list of (time, key, callback), ordered on time.
 
@@ -52,5 +54,10 @@ def clear(key):
 def on_tick(users):
 	now = time.time()
 	while events and now >= events[0][0]:
-		events[0][1]()
+		try:
+			events[0][1]()
+		except InvalidUserError, ex:
+			logging.info("User %s disconnected before packet could be sent in event: %s" % (ex.args[0], events[0]))
+		except Exception:
+			logging.exception("Error while running event: %s" % (events[0]))
 		events.pop(0)
