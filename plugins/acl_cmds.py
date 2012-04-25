@@ -76,7 +76,7 @@ def common(fn):
 				tell(user, "Warning: %s is not a player known to this server.\n"
 				           "If you have made a mistake, type:\n/acls %s clear %s" % (zone_original, name))
 
-		if ADMIN not in zone['acls'].get(name, zone['acls']['EVERYONE']) and user.username not in ops():
+		if ADMIN not in zone['acls'].get(user.username, zone['acls']['EVERYONE']) and user.username not in ops():
 			tell(user, "You do not have permission to modify ACLs for this zone. "
 			           "If you have accidentially locked yourself out, please contact an op for assistance.")
 			return
