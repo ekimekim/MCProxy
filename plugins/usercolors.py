@@ -46,7 +46,7 @@ def on_packet(packet, user_obj, to_server):
 			i = 0
 			while i < len(s):
 				if s[i:i+len(name)].lower() == name:
-					s = s[:i] + names[name] + name + prefs['all'] + s[i+len(name):]
+					s = s[:i] + names[name] + s[i:i+len(name)] + prefs['all'] + s[i+len(name):]
 					i += len(name)
 				else:
 					i += 1
