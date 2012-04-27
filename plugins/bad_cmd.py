@@ -3,7 +3,7 @@
 import player_cmd as cmd
 from helpers import tell, ops
 
-MC_COMMANDS = ['kill', 'tell']
+MC_COMMANDS = ['kill', 'tell', 'me']
 
 def on_start():
 	cmd.register(r'/(.*)', uncaught_command)
