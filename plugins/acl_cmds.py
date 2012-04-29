@@ -122,6 +122,9 @@ def aclrm(message, user, zone, name, perm):
 
 @common
 def aclclear(message, user, zone, name):
+	if name == 'EVERYONE':
+		tell(user, "EVERYONE is not valid for this command")
+		return
 	if name not in zone['acls']:
 		tell(user, "%s doesn't have any specific ACLs" % name)
 	else:
