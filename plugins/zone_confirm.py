@@ -6,6 +6,7 @@ Ops gain commands:
 	/zone op help
 	/zone op wool ZONE - Paint 10x10x10 area about and below op in green woll for requested zone, red wool other zone, yellow if both.
 	/zone op confirm ZONE
+	/zone op modify "ZONE" KEY VALUE
 """
 
 import zones
@@ -21,6 +22,7 @@ def on_start():
 	register("/zone op help", ophelp)
 	register("/zone op wool (.*)", zonewool)
 	register("/zone op confirm (.*)", zoneconfirm)
+	register('/zone op modify "([^"]+)" ([^ ]+) (.*)', zonemodify)
 
 def ops_only(fn):
 	def wrapped_fn(message, user, *args):
@@ -39,7 +41,8 @@ def ophelp(message, user):
 	           "__ red: In zone besides one given.\n"
 	           "__ yellow: In given zone AND at least one other.\n"
 	           "__ You will need to log out/in to reverse changes.\n"
-	           "/zone op confirm <zone> - Confirm zone.")
+	           "/zone op confirm <zone> - Confirm zone.\n"
+	           '/zone op modify "<zone>" <key> <value> - Advanced use. Quotes required.')
 
 
 @ops_only
@@ -54,3 +57,13 @@ def zoneconfirm(message, user, name):
 @ops_only
 def zonewool(message, user, name):
 	pass # TODO
+
+
+@ops_only
+def zonemodify(message, user, zone, key, value):
+	if name not in zones.get_zones():
+		tell(user, "Zone does not exist.")
+		return
+	zone = zones.get_zones()[zone]
+	zone[key] = eval(value)
+	tell(user, "Success")
