@@ -16,6 +16,8 @@ import json, os
 
 from config import SERVER_DIR, DEBUG
 
+data = {}
+
 if not DEBUG:
 	JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.json')
 	JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.json~')
@@ -61,5 +63,9 @@ def on_tick(users):
 
 def sync():
 	global data
-	os.rename(JSON_FILE, JSON_FILE_BACKUP)
-	json.dump(data, open(JSON_FILE, 'w'))
+	try:
+		os.rename(JSON_FILE, JSON_FILE_BACKUP)
+		json.dump(data, open(JSON_FILE_TEMP, 'w'))
+		os.rename(JSON_FILE_TEMP, JSON_FILE)
+	except:
+		os.rename(JSON_FILE_BACKUP, JSON_FILE)
