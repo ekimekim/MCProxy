@@ -4,7 +4,7 @@ sys.path.append(PLUGIN_PATH)
 
 # Import plugins here
 import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_cmd, welcome, menus, schedule, plugin_helpers, zones, persistent_store
-import acls
+import acls, dotstrip
 import player_cmd as cmd
 import menu_test, testing
 import zone_create_menu, zone_cmds, acl_cmds, zone_confirm
@@ -29,6 +29,7 @@ plugins.append(menus) # Should probably be before anything that depends on it
 # features
 plugins.append(welcome) # Has /help, so high priority. But should be after usernames (for the welcome)
 plugins.append(acls)
+plugins.append(dotstrip) # Must be before usercolors
 plugins.append(usercolors)
 plugins.append(zone_create_menu)
 plugins.append(zone_cmds)

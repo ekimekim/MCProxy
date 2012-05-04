@@ -65,7 +65,7 @@ def sync():
 	global data
 	try:
 		os.rename(JSON_FILE, JSON_FILE_BACKUP)
-		json.dump(data, open(JSON_FILE_TEMP, 'w'))
+		json.dump(data, open(JSON_FILE_TEMP, 'w'), indent=4)
 		os.rename(JSON_FILE_TEMP, JSON_FILE)
 	except:
 		os.rename(JSON_FILE_BACKUP, JSON_FILE)
