@@ -48,6 +48,7 @@ def aclcmdhelp(message, user):
 	           "__ Set the user's permissions in that zone to exactly\n"
 	           "__ the permissions given. Permissions should be\n"
 	           "__ space-seperated, eg. ENTRY INTERACT MODIFY\n"
+	           "__ Leave it blank to set all permissions off.\n"
 	           "/acls <zone> add <user> <permission>\n"
 	           "__ Add a single permission to what a user can do.\n"
 	           "/acls <zone> remove <user> <permission>\n"
@@ -57,13 +58,13 @@ def aclcmdhelp(message, user):
 	           "To modify the default permissions, replace <user> with EVERYONE.")
 
 
-@op_only
+@ops_only
 def ophelp(message, user):
 	tell(user, "Op-only commands:\n"
 	           "/acls op force {on,off} - Turn force on or off. Force lets you ignore all zone restrictions.")
 
 
-@op_only
+@ops_only
 def opforce(message, user, mode):
 	user.acl_force = (mode == 'on')
 	tell(user, "Set force %s" % mode)

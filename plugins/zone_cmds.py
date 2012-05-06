@@ -255,7 +255,7 @@ def helpinfo(message, user, command):
 		       "__ cube <dim> <x1> <y1> <z1> <x2> <y2> <z2>\n"
 		       "__ cylinder <dim> <x> <y> <z> <radius> <height>\n"
 		       "__ json <json> (EXPERIMENTAL, MAY NOT WORK)\n"
-		       "Note that <dim> should be -1,0,1 for overworld, Nether, End\n"
+		       "Note that <dim> should be 0,-1,1 for overworld, Nether, End\n"
 		       "The json bounds defn is special. The remainder of the line "
 		       "should be valid JSON. If you don't know what that is, ignore it. JSON schema "
 		       "is given by typing /zone help json",
