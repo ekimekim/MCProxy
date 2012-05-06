@@ -38,3 +38,13 @@ def tell(user, message, delay=0, lock=None, prefix=''):
 		tell_fn()
 
 	return True
+
+
+def ops_only(fn):
+	"""Decorate a player_cmd callback to make it only match if user is op"""
+	def wrapped_fn(message, user, *args):
+		if user.username not in helpers.ops():
+			return False
+		else:
+			return fn(message, user, *args)
+	return wrapped_fn

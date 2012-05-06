@@ -10,7 +10,7 @@ DESCRIPTION = """Commands for controlling the acls of a zone:
 """
 
 from player_cmd import register
-from plugin_helpers import tell
+from plugin_helpers import tell, ops_only
 from helpers import all_users, ops
 from zones import get_zones
 from acls import ALL_PERMS, ADMIN
@@ -20,10 +20,12 @@ def on_start():
 	re_name = r'(?:[^"][^ ]+|"(?:[^"]|\\")+")'
 	register("/acls help", aclhelp)
 	register("/acls commands", aclcmdhelp)
-	register("/acls (%s) set ([^ ]+)((?: [A-Z]+)+)" % re_name, aclset)
+	register("/acls (%s) set ([^ ]+)((?: [A-Z]+)+)?" % re_name, aclset)
 	register("/acls (%s) add ([^ ]+) ([A-Z]+)" % re_name, acladd)
 	register("/acls (%s) remove ([^ ]+) ([A-Z]+)" % re_name, aclrm)
 	register("/acls (%s) clear ([^ ]+)" % re_name, aclclear)
+	register("/acls op", ophelp)
+	register("/acls op force (on|off)", opforce)
 
 
 def aclhelp(message, user):
@@ -36,7 +38,8 @@ def aclhelp(message, user):
 	           "Note: even with this permission, you need to not be holding a block in your hands for it to work.\n"
 	           "MODIFY - Without this permission, you can't place or dig blocks.\n"
 	           "ADMIN - This permission allows you to change the permissions of this zone.\n"
-	           "Type /acls commands for help on how to modify permissions.")
+	           "Type /acls commands for help on how to modify permissions."
+	           "Type /acls op for help on op-only commands.")
 
 
 def aclcmdhelp(message, user):
@@ -52,6 +55,18 @@ def aclcmdhelp(message, user):
 	           "/acls <zone> clear <user>\n"
 	           "__ Reset the given user to use the default permissions.\n"
 	           "To modify the default permissions, replace <user> with EVERYONE.")
+
+
+@op_only
+def ophelp(message, user):
+	tell(user, "Op-only commands:\n"
+	           "/acls op force {on,off} - Turn force on or off. Force lets you ignore all zone restrictions.")
+
+
+@op_only
+def opforce(message, user, mode):
+	user.acl_force = (mode == 'on')
+	tell(user, "Set force %s" % mode)
 
 
 def common(fn):
@@ -87,7 +102,7 @@ def common(fn):
 
 @common
 def aclset(message, user, zone, name, perms):
-	perms = filter(None, perms.split())
+	perms = filter(None, perms.split()) if perms is not None else []
 	for perm in perms:
 		if perm not in ALL_PERMS:
 			tell(user, "%s not an ACL." % perm)

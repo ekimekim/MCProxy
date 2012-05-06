@@ -122,6 +122,8 @@ def on_packet(packet, user, to_server):
 
 def check_acls(permission, user, position=None):
 	"""Return bool whether user may currently <permission> at <position:defaults to user's position>"""
+	if hasattr(user, 'acl_force') and user.acl_force:
+		return True
 	if position is None:
 		position = user.position
 	for zone in zones.get_zones_at_point(user.dimension, position):

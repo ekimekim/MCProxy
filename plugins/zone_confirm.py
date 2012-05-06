@@ -12,7 +12,7 @@ Ops gain commands:
 import zones
 from player_cmd import register
 from helpers import ops
-from plugin_helpers import tell
+from plugin_helpers import tell, ops_only
 
 def set_confirm(zone):
 	zone['confirmed'] = False
@@ -24,13 +24,6 @@ def on_start():
 	register("/zone op confirm (.*)", zoneconfirm)
 	register('/zone op modify "([^"]+)" ([^ ]+) (.*)', zonemodify)
 
-def ops_only(fn):
-	def wrapped_fn(message, user, *args):
-		if user.username not in ops():
-			return False
-		else:
-			return fn(message, user, *args)
-	return wrapped_fn
 
 @ops_only
 def ophelp(message, user):
