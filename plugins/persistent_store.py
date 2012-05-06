@@ -12,7 +12,7 @@ If you require a stronger guarentee, you can call sync() to force a sync early.
 The top-level object itself must be either a list or a dict.
 """
 
-import json, os
+import json, os, logging
 
 from config import SERVER_DIR, DEBUG
 
@@ -20,9 +20,11 @@ data = {}
 
 if not DEBUG:
 	JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.json')
+	JSON_FILE_TEMP = os.path.join(SERVER_DIR, '.persistent_data.json.tmp')
 	JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.json~')
 else:
 	JSON_FILE = os.path.join(SERVER_DIR, 'persistent_data.debug.json')
+	JSON_FILE_TEMP = os.path.join(SERVER_DIR, '.persistent_data.debug.json.tmp')
 	JSON_FILE_BACKUP = os.path.join(SERVER_DIR, '.persistent_data.debug.json~')
 
 
@@ -68,4 +70,6 @@ def sync():
 		json.dump(data, open(JSON_FILE_TEMP, 'w'), indent=4)
 		os.rename(JSON_FILE_TEMP, JSON_FILE)
 	except:
+		logging.warning("Using backup persistant store file")
 		os.rename(JSON_FILE_BACKUP, JSON_FILE)
+		raise
