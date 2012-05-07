@@ -10,10 +10,12 @@ CLIENT_TO_SERVER = 0x02
 PROTOCOL_VERSION = 28
 
 class Packet:
-	def __init__(self):
+	def __init__(self, packet_type=0, **data):
 		self.direction = 0
-		self.ident = 0
-		self.data = {}
+		if type(packet_type) == str:
+			packet_type = dict((v,k) for k,v in names.items())[packet_type] # Reverse lookup
+		self.ident = packet_type
+		self.data = data
 
 	def name(self):
 		return names[self.ident]
