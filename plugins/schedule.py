@@ -14,10 +14,11 @@ def register(timeout, callback, key=None):
 	If key is given, it will replace an old timeout (if any) with the same key.
 	"""
 
-	try:
-		clear(key)
-	except KeyError:
-		pass
+	if key is not None:
+		try:
+			clear(key)
+		except KeyError:
+			pass
 
 	new_time = time.time() + timeout
 	for i in range(len(events)):
