@@ -7,7 +7,7 @@ import log_all, log_sorted, usernames, no_changes, sp_opcolor, usercolors, bad_c
 import acls, dotstrip
 import player_cmd as cmd
 import menu_test, testing
-import zone_create_menu, zone_cmds, acl_cmds, zone_confirm, long_operations
+import zone_create_menu, zone_cmds, acl_cmds, zone_confirm, long_operations, ban_ips
 
 # Set ordering here
 
@@ -28,6 +28,7 @@ plugins.append(cmd) # Should probably be before anything that depends on it
 plugins.append(menus) # Should probably be before anything that depends on it
 
 # features
+plugins.append(ban_ips)
 plugins.append(welcome) # Has /help, so high priority. But should be after usernames (for the welcome)
 plugins.append(acls)
 plugins.append(dotstrip) # Must be before usercolors
@@ -37,7 +38,7 @@ plugins.append(zone_cmds)
 plugins.append(zone_confirm)
 plugins.append(acl_cmds)
 
-plugins.append(testing)
+#plugins.append(testing)
 
 # tail
 plugins.append(bad_cmd) # Always last out of chat commands
